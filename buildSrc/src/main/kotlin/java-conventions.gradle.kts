@@ -24,6 +24,10 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-Xlint:all")
+}
+
 val style by extra { findProperty("style") == "true" }
 
 tasks.withType<Checkstyle> {
@@ -70,7 +74,6 @@ checkerFramework {
         "org.checkerframework.checker.resourceleak.ResourceLeakChecker",
     )
     extraJavacArgs = listOf(
-        "-Xlint:all",
         "-AreportEvalWarns",
         "-Astubs=${stubDir}",
         "-AstubWarnIfNotFoundIgnoresClasses",
