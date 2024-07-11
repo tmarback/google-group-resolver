@@ -1,29 +1,10 @@
 plugins {
-	java
-    checkstyle
-	id("org.springframework.boot") version "3.3.1"
+	id("java-conventions")
+    alias(libs.plugins.springboot)
 }
 
 group = "dev.sympho"
 version = "0.0.1-SNAPSHOT"
-
-val strictMode = findProperty("strict") == "true"
-
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
-}
-
-configurations {
-	compileOnly {
-		extendsFrom(configurations.annotationProcessor.get())
-	}
-}
-
-repositories {
-	mavenCentral()
-}
 
 dependencies {
     // Regular dependencies
@@ -50,15 +31,4 @@ dependencies {
     developmentOnly(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)) // https://github.com/gradle/gradle/issues/12519
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-}
-
-tasks.withType<Test> {
-	useJUnitPlatform()
-}
-
-if (strictMode) {
-    println("Using strict mode")
-    checkstyle {
-        maxWarnings = 0
-    }
 }

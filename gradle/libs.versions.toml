@@ -1,0 +1,2 @@
+[plugins]
+springboot = { id = "org.springframework.boot", version = "3.3.1" }
