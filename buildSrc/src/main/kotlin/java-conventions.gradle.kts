@@ -25,7 +25,7 @@ tasks.withType<Test> {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.add("-Xlint:all")
+    options.compilerArgs.add("-Xlint:all,-processing,-requires-transitive-automatic,-requires-automatic")
 }
 
 val style by extra { findProperty("style") == "true" }

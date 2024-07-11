@@ -1,3 +1,8 @@
+[libraries]
+spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
+bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "6.4.1" }
+osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
+
 [plugins]
 springboot = { id = "org.springframework.boot", version = "3.3.1" }
 tasktree = { id = "com.dorongold.task-tree", version = "4.0.0" }

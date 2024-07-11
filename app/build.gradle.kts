@@ -27,6 +27,11 @@ dependencies {
 
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
+    // To deal with missing annotation warnings
+    annotationProcessor(libs.spotbugs)
+    annotationProcessor(libs.bnd.annotation)
+    annotationProcessor(libs.osgi.annotation)
+
     // Dev tools
     developmentOnly(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)) // https://github.com/gradle/gradle/issues/12519
 
