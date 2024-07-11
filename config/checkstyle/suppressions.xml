@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN" "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!-- Allow long test files -->
+    <suppress checks="FileLength"
+        files="test.*"
+    />
+    <!-- Allow test packages to not be documented -->
+    <suppress checks="JavadocPackage"
+        files="test.*"
+    />
+    <!-- Test classes do not need constructors -->
+    <suppress checks="MissingCtor"
+        files="test.*"
+    />
+    <suppress checks="HideUtilityClassConstructor"
+        files="test.*"
+    />
+    <!-- Allow unrestricted string literals and magic numbers in test classes -->
+    <suppress checks="MultipleStringLiterals"
+        files="test.*"
+    />
+    <suppress checks="MagicNumber"
+        files="test.*"
+    />
+    <!-- Allow static and star imports in test classes -->
+    <suppress checks="AvoidStaticImport"
+        files="test.*"
+    />
+    <suppress checks="AvoidStarImport"
+        files="test.*"
+    />
+    <!-- Allow any order on tests for better test ordering -->
+    <suppress checks="InnerTypeLast"
+        files="test.*"
+    />
+    <!-- Allow test annotations to use any style for maintainability of parameter lists -->
+    <suppress checks="AnnotationUseStyle"
+        files="test.*"
+    />
+</suppressions>

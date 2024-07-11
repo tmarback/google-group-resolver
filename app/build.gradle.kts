@@ -1,10 +1,13 @@
 plugins {
 	java
+    checkstyle
 	id("org.springframework.boot") version "3.3.1"
 }
 
 group = "dev.sympho"
 version = "0.0.1-SNAPSHOT"
+
+val strictMode = findProperty("strict") == "true"
 
 java {
 	toolchain {
@@ -51,4 +54,11 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+if (strictMode) {
+    println("Using strict mode")
+    checkstyle {
+        maxWarnings = 0
+    }
 }

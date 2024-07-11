@@ -1,0 +1,716 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+          "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+          "https://checkstyle.org/dtds/configuration_1_3.dtd">
+          
+<!-- 
+    Configuration file for style checker
+    See https://checkstyle.sourceforge.io/config.html 
+  -->
+
+<module name="Checker">
+  
+    <!-- BeforeExecutionFileFilters is required for sources that are based on java9 -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
+    
+    <!-- Filters -->
+
+    <!-- Suppression file -->
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+
+    <!-- @SuppressWarnings support -->
+    <module name="SuppressWarningsFilter"/>
+
+    <!-- <p> tag checking kind of broken with some tags -->
+    <module name="SuppressWithPlainTextCommentFilter">
+        <property name="offCommentFormat" value="BEGIN BUGGED PARAGRAPH"/>
+        <property name="onCommentFormat" value="END BUGGED PARAGRAPH"/>
+        <property name="checkFormat" value="JavadocParagraph"/>
+    </module>
+    
+    <!-- File structure checks -->
+   
+    <!-- Log very long files (>2k lines) -->
+    <module name="FileLength">
+        <property name="severity" value="info"/>
+    </module>
+    
+     <!-- Files should not use tabs and end with a newline -->
+    <module name="FileTabCharacter"/>
+    <module name="NewlineAtEndOfFile"/>
+    
+    <!-- Lines should be no longer than 100 characters -->
+    <module name="LineLength">
+        <property name="max" value="100"/>
+    </module>
+    <module name="SuppressWithPlainTextCommentFilter">
+        <property name="offCommentFormat" value="BEGIN LONG LINES"/>
+        <property name="onCommentFormat" value="END LONG LINES"/>
+        <property name="checkFormat" value="LineLength"/>
+    </module>
+    
+    <!-- Package checks -->
+    
+    <!-- All packages should have a javadoc header -->
+    <module name="JavadocPackage"/>
+    
+    <!-- Containers -->
+    <module name="TreeWalker">
+    
+        <!-- Detect @SuppressWarnings for SuppressWarningsFilter -->
+        <module name="SuppressWarningsHolder"/>
+        
+    </module>
+    
+    <!-- Annotation checks -->
+    <module name="TreeWalker">
+    
+        <!-- Annotations should be between the javadoc header and the element -->
+        <module name="AnnotationLocation">
+            <property name="allowSamelineMultipleAnnotations" value="true"/>
+        </module>
+        <!-- 
+            Keep annotation as compact as possible (e.g. no array when it's a single 
+            value, etc)
+          -->
+        <module name="AnnotationUseStyle"/>
+        
+    </module>
+    
+    <!-- Array/Collection checks -->
+    <module name="TreeWalker">
+        
+        <!-- Add trailing comma to array initializers (except for inline initializers) -->
+        <module name="ArrayTrailingComma">
+            <property name="severity" value="warning"/>
+        </module>
+        <!-- Don't use double-brace initialization -->
+        <module name="AvoidDoubleBraceInitialization"/>
+        <!-- Use Java-style arrays (e.g. String[] arr) -->
+        <module name="ArrayTypeStyle"/>
+
+    </module>
+    
+    <!-- Javadoc checks -->
+    <module name="TreeWalker">
+        
+        <!-- Order of tags in javadoc headers -->
+        <module name="AtclauseOrder">
+            <property name="tagOrder"
+                value="@param, @return, @throws, @exception, @see, 
+                       @serial, @serialField, @serialData, 
+                       @author, @version, @since, 
+                       @apiNote, @implSpec, @implNote, @deprecated"/>
+        </module>
+        <!-- Javadoc headers must be in valid positions -->
+        <module name="InvalidJavadocPosition"/>
+        <!-- Block tags must be at the start of a line, except inline tags -->
+        <module name="JavadocBlockTagLocation"/>
+        <!-- Javadoc content must start at the second line -->
+        <module name="JavadocContentLocationCheck"/>
+        <!-- Method javadoc must document all parameters, return value, and thrown exceptions -->
+        <module name="JavadocMethod">
+            <property name="validateThrows" value="true"/>
+        </module>
+        <!-- Must have a space after the leading asterisk -->
+        <module name="JavadocMissingWhitespaceAfterAsterisk"/>
+        <!-- 
+            There must be a blank line between paragraphs, and all paragraphs other 
+            than the first must start with <p>
+          -->
+        <module name="JavadocParagraph"/>
+        <!-- Javadoc comment must be well-formed and may not be empty -->
+        <!-- This module refuses to be suppressed so it was turned off -->
+        <!-- <module name="JavadocStyle">
+            <property name="checkEmptyJavadoc" value="true"/>
+        </module> -->
+        <!-- <module name="SummaryJavadocCheck"/> -->
+        <!-- Javadoc tag continuation must be indented by at least 4 spaces -->
+        <module name="JavadocTagContinuationIndentation"/>
+        <!-- Type headers must document generic type parameters, author, version, and since -->
+        <module name="JavadocType">
+            <!-- <property name="authorFormat" value="\S(.*\S)?"/> -->
+            <!-- Unfortunately we cannot add implNote, implSpec, apiNote and apiSpec to checkstyle -->
+            <property name="allowUnknownTags" value="true"/>
+        </module>
+        <!-- Variables other than "serialVersionUID" or "log" must be documented -->
+        <module name="JavadocVariable">
+            <property name="ignoreNamePattern" value="log"/>
+        </module>
+        <!-- @Deprecated annotation and @deprecated javadoc tag always go together -->
+        <module name="MissingDeprecated"/>
+        <!-- All non-@Override methods must have javadoc comments -->
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="private"/>
+        </module>
+        <!-- All types and packages must have javadoc comments -->
+        <module name="MissingJavadocPackage"/>
+        <module name="MissingJavadocType">
+            <property name="scope" value="private"/>
+        </module>
+        <!-- Non-inline tags must have a description -->
+        <module name="NonEmptyAtclauseDescription"/>
+        <!-- Single-line javadoc cannot have non-inline tags -->
+        <module name="SingleLineJavadoc"/>
+        <!-- There must be an empty line before the first javadoc tag -->
+        <module name="RequireEmptyLineBeforeBlockTagGroup"/>
+
+    </module>
+    
+    <!-- String checks -->
+    <module name="TreeWalker">
+        
+        <!-- 
+            Don't use escaped Unicode characters (use the actual character instead, unless:
+            - It is a control character
+            - It is a non-printable escape character
+            - All characters in the string are escaped 
+          -->
+        <module name="AvoidEscapedUnicodeCharacters">
+            <property name="severity" value="warning"/>
+            <property name="allowEscapesForControlCharacters" value="true"/>
+            <property name="allowNonPrintableEscapes" value="true"/>
+            <property name="allowIfAllCharactersEscaped" value="true"/>
+        </module>
+        <!-- String literals should be on the left side of equals() -->
+        <module name="EqualsAvoidNull"/>
+        <!-- Avoid multiple copies of string literal in file -->
+        <!-- <module name="MultipleStringLiterals">
+            <property name="severity" value="info"/>
+            <!- - Ignore empty and single-whitespace - ->
+            <property name="ignoreStringsRegexp" value='^"(.|(\s?)|(\\[nt]))"$'/>
+        </module> -->
+        <!-- Don't use == or != with String literals -->
+        <module name="StringLiteralEquality"/>
+
+    </module>
+    
+    <!-- Redundancy checks -->
+    <module name="TreeWalker">
+        
+        <!-- Avoid nested blocks (other than switch cases) -->
+        <module name="AvoidNestedBlocks">
+            <property name="severity" value="warning"/>
+            <property name="allowInSwitchCase" value="true"/>
+        </module>
+        <!-- Avoid explicitly calling super() in constructor -->
+        <module name="AvoidNoArgumentSuperConstructorCall">
+            <property name="severity" value="warning"/>
+        </module>
+        <!-- Avoid empty statements -->
+        <module name="EmptyStatement"/>
+        <!-- Log class/object members explicitly initialized to their default value -->
+        <module name="ExplicitInitialization">
+            <property name="severity" value="info"/>
+        </module>
+        <!-- Avoid explicitly specifying implicit modifiers -->
+        <module name="RedundantModifier"/>
+        <!-- Flag boolean expressions that can be simplified -->
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <!-- Avoid redundant parenthesis in expressions -->
+        <module name="UnnecessaryParentheses">
+            <property name="severity" value="info"/>
+        </module>
+        <!-- Avoid redundant semicolon in constant-only enums -->
+        <module name="UnnecessarySemicolonInEnumeration"/>
+        <!-- Avoid redundant semicolon in last resource -->
+        <module name="UnnecessarySemicolonInTryWithResources"/>
+        <!-- Avoid redundant semicolon after type declaration -->
+        <module name="UnnecessarySemicolonAfterOuterTypeDeclaration"/>
+        <!-- Avoid redundant semicolon after member declaration in type -->
+        <module name="UnnecessarySemicolonAfterTypeMemberDeclaration"/>
+
+    </module>
+    
+    <!-- Import checks -->
+    <module name="TreeWalker">
+        
+        <!-- Avoid star imports (other than JUnit assertions) -->
+        <module name="AvoidStarImport">
+            <property name="excludes" value="org.junit.jupiter.api.Assertions"/>
+        </module>
+        <!-- Avoid static imports (other than JUnit assertions) -->
+        <module name="AvoidStaticImport">
+            <property name="excludes" value="org.junit.jupiter.api.Assertions.*"/>
+        </module>
+        <!-- 
+            Must follow Eclipse import order:
+            1. static imports
+            2. java, javax, and jakarta packages
+            3. org and com packages
+            4. all other imports
+            Imports should be sorted within groups, and groups should  be separated
+            from each other by one blank line (but should not be separated internally)
+          -->
+        <module name="ImportOrder">
+            <property name="groups" value="/^java\./,javax,jakarta,com,org"/>
+            <property name="ordered" value="true"/>
+            <property name="separated" value="true"/>
+            <property name="option" value="top"/>
+            <property name="sortStaticImportsAlphabetically" value="true"/>
+        </module>
+        <!-- Avoid redundant imports -->
+        <module name="RedundantImport"/>
+        <!-- Avoid unused imports -->
+        <module name="UnusedImports">
+            <property name="severity" value="warning"/>
+        </module>
+
+    </module>
+    
+    <!-- Complexity/length checks -->
+    <module name="TreeWalker">
+        
+        <!-- Log very complex boolean expressions (>5 operators) -->
+        <module name="BooleanExpressionComplexity">
+            <property name="severity" value="info"/>
+            <property name="max" value="5"/>
+        </module>
+        <!-- 
+            Avoid high cyclomatic complexity (>20)
+            (https://checkstyle.sourceforge.io/config_metrics.html#CyclomaticComplexity)
+          -->
+        <module name="CyclomaticComplexity">
+            <property name="severity" value="warning"/>
+            <property name="max" value="20"/>
+        </module>
+        <!-- Log constructors/methods with too many executable statements (>50) -->
+        <module name="ExecutableStatementCount">
+            <property name="severity" value="info"/>
+            <property name="max" value="50"/>
+        </module>
+        <!-- Avoid excessively long methods (>150 lines) -->
+        <module name="MethodLength">
+            <property name="severity" value="warning"/>
+        </module>
+        <!--
+            Log methods with a high NPATH complexity (>500) 
+            (https://checkstyle.sourceforge.io/config_metrics.html#NPathComplexity)
+          -->
+        <module name="NPathComplexity">
+            <property name="severity" value="info"/>
+            <property name="max" value="500"/>
+        </module>
+        <!-- Log non-@Override methods with many parameters (>10) -->
+        <module name="ParameterNumber">
+            <property name="severity" value="info"/>
+            <property name="ignoreOverriddenMethods" value="true"/>
+            <property name="max" value="10"/>
+        </module>
+
+    </module>
+    
+    <!-- Naming checks -->
+    <module name="TreeWalker">
+        
+        <!-- 
+            Parameter of catch clause should be named as one of:
+            - two lower case letters + one or more upper or lower case letter
+            - "e"
+            - "ex"
+            - "t"
+          -->
+        <module name="CatchParameterName"/>
+        <!-- Class type parameters should be one or two upper case letters, or "SELF" -->
+        <module name="ClassTypeParameterName">
+            <property name="format" value="^[A-Z]{1,3}$|^SELF$"/>
+        </module>
+        <module name="InterfaceTypeParameterName">
+            <property name="format" value="^[A-Z]{1,3}$|^SELF$"/>
+        </module>
+        <module name="RecordTypeParameterName">
+            <property name="format" value="^[A-Z]{1,3}$|^SELF$"/>
+        </module>
+        <!-- 
+            Variable names must start with a lower case letter, and only 
+            contain letters and numbers 
+          -->
+        <module name="LocalFinalVariableName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="PatternVariableName"/>
+        <module name="StaticVariableName"/>
+        <module name="RecordComponentName"/>
+        <!-- 
+            Method names must start with a lower case letter, and only 
+            contain letters and numbers .
+            Methods may not have the same name as the class they are in.
+          -->
+        <module name="MethodName"/>
+        <!-- Method type parameters should be one or two upper case letters -->
+        <module name="MethodTypeParameterName">
+            <property name="format" value="^[A-Z]{1,2}$"/>
+        </module>
+        <!-- 
+            Package names should start with a lower case letter and only contain lower case
+            letters and numbers. The root package name may not contain numbers.
+          -->
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9_]*)*$"/>
+        </module>
+        <!-- 
+            Type names must start with an upper case letter, and only 
+            contain letters and numbers 
+          -->
+        <module name="TypeName"/>
+
+    </module>
+    
+    <!-- Whitespace checks -->
+    <module name="TreeWalker">
+        
+        <!-- Comments should be indented at the same level as surrounding code -->
+        <module name="CommentsIndentation"/>
+        <!-- Add single space of padding for empty for initializer or iterator -->
+        <module name="EmptyForInitializerPad">
+            <property name="option" value="space"/>
+        </module>
+        <module name="EmptyForIteratorPad">
+            <property name="option" value="space"/>
+        </module>
+        <!-- 
+            Must have empty line separators after header, package, all import 
+            declarations, fields, constructors, methods, nested classes, static 
+            initializers and instance initializers.
+            May omit separator between fields.
+            May not have multiple blank lines between elements.
+          -->
+        <module name="EmptyLineSeparator">
+            <property name="allowNoEmptyLineBetweenFields" value="true"/>
+            <property name="allowMultipleEmptyLines" value="false"/>
+            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
+        </module>
+        <!-- 
+            Whitespace around generic tokens should follow typical convention
+            (https://checkstyle.sourceforge.io/config_whitespace.html#GenericWhitespace)
+          -->
+        <module name="GenericWhitespace"/>
+        <!-- 
+            4 spaces per indent level
+            - Closing braces on the same level as opening statement
+            - Indent case labels by one level
+            - Indent code in case by one level from label
+            - Indent throws clause by two levels (if on separate line)
+            - Indent array initializer by two levels (if on separate line)
+            This is the minimum, indent may be larger if necessary
+          -->
+        <module name="Indentation">
+            <property name="throwsIndent" value="8"/>
+            <property name="arrayInitIndent" value="8"/>
+            <property name="lineWrappingIndentation" value="8"/>
+        </module>
+        <!-- Left curly brace must be at the end of the line -->
+        <module name="LeftCurly">
+            <property name="ignoreEnums" value="false"/>
+        </module>
+        <!-- Don't put a space between method name and parenthesis -->
+        <module name="MethodParamPad"/>
+        <!-- Import and package statements should not wrap -->
+        <module name="NoLineWrap"/>
+        <!-- 
+            No space after:
+            - @ (annotations)
+            - pre-token unary operators (pre-increment, pre-decrement, ~, !)
+            - .
+            - [
+          -->
+        <module name="NoWhitespaceAfter">
+            <property name="tokens"
+                value="AT, INC, DEC, UNARY_MINUS, UNARY_PLUS, BNOT, LNOT,
+                       DOT, ARRAY_DECLARATOR, INDEX_OP"/>
+            <property name="allowLineBreaks" value="false"/>
+        </module>
+        <!-- 
+            No space before:
+            - ,
+            - ;
+            - post-token unary operators (post-increment, post-decrement)
+            - ...
+            - : (labels)
+          -->
+        <module name="NoWhitespaceBefore"/>
+        <module name="NoWhitespaceBeforeCaseDefaultColon"/>
+        <!-- When wrapping an expression, operator goes into new line -->
+        <module name="OperatorWrap"/>
+        <!-- Pad parenthesis with spaces (after left and before right parenthesis) -->
+        <module name="ParenPad">
+            <property name="option" value="space"/>
+        </module>
+        <!--
+            Right curly brace must be alone in line, except when followed by else/catch/etc in
+            block (still must be at the start of the line) or part of a single-line expression
+          -->
+        <module name="RightCurly"/>
+        <!-- When wrapping, comma must be at the end of the current line -->
+        <module name="SeparatorWrap">
+            <property name="tokens" value="COMMA"/>
+            <property name="option" value="eol"/>
+        </module>
+        <!-- When wrapping, period must be at the start of the next line -->
+        <module name="SeparatorWrap">
+            <property name="tokens" value="DOT"/>
+            <property name="option" value="nl"/>
+        </module>
+        <!-- Avoid multiple spaces -->
+        <module name="SingleSpaceSeparator"/>
+        <!-- Pad typecast parenthesis with spaces (after left and before right parenthesis) -->
+        <module name="TypecastParenPad">
+            <property name="option" value="space"/>
+        </module>
+        <!--
+            Always have a space after:
+            - ,
+            - ; (except for empty for)
+            - Type casts
+            - Control flow statements (if, else, while, do) 
+          -->
+        <module name="WhitespaceAfter"/>
+        <!-- 
+            Always have a space around:
+            - Non-unary operators
+            - Keywords (if, catch, synchronized, etc)
+            - Curly braces (no space required within an empty block, that is "{}")
+            - Enhanced-for colon
+          -->
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+            <property name="allowEmptyLambdas" value="true"/>
+            <property name="allowEmptyCatches" value="true"/>
+            <property name="ignoreEnhancedForColon" value="false"/>
+        </module>
+
+    </module>
+    
+    <!-- Override checks -->
+    <module name="TreeWalker">
+        
+        <!-- 
+            If class defines equals() with a parameter other than Object,
+            should also override equals(Object) 
+          -->
+        <module name="CovariantEquals"/>
+        <!-- A class that overrides equals() should also override hashCode() and vice versa -->
+        <module name="EqualsHashCode"/>
+        <!-- If overriding clone(), must call super.clone() -->
+        <module name="SuperClone"/>
+        <!-- If overriding finalize(), must call super.finalize() -->
+        <module name="SuperFinalize"/>
+
+    </module>
+    
+    <!-- Ordering checks -->
+    <module name="TreeWalker">
+        
+        <!--
+            Declare class members in the order:
+            1. Static variables
+            2. Instance variables
+            3. Constructors
+            4. Methods
+            Within each type, also keep this order:
+            1. public
+            2. protected
+            3. package/default
+            4. private 
+          -->
+        <module name="DeclarationOrder">
+            <property name="severity" value="warning"/>
+        </module>
+        <!-- Default case in switch should be the last one -->
+        <module name="DefaultComesLast">
+            <property name="severity" value="warning"/>
+        </module>
+        <!-- Declare inner types at the end of class/interface (after methods) -->
+        <module name="InnerTypeLast">
+            <property name="severity" value="warning"/>
+        </module>
+        <!--
+            Modifiers must follow this order:
+            1.  public
+            2.  protected
+            3.  private
+            4.  abstract
+            5.  default
+            6.  static
+            7.  final
+            8.  transient
+            9.  volatile
+            10. synchronized
+            11. native
+            12. strictfp
+          -->
+        <module name="ModifierOrder"/>
+        <!-- Overloaded methods must be grouped together -->
+        <module name="OverloadMethodsDeclarationOrder">
+            <property name="severity" value="warning"/>
+        </module>
+
+    </module>
+    
+    <!-- Missing code/sanity checks -->
+    <module name="TreeWalker">
+        
+        <!-- Avoid empty block in switch case (other than fall-through) -->
+        <module name="EmptyBlock"/>
+        <!-- 
+            Avoid empty catch block, unless it contains one of the following 
+            comments in the first line:
+            - // Expected
+            - // expected
+            - // Ignore
+            - // ignore
+         -->
+        <module name="EmptyCatchBlock">
+            <property name="commentFormat" value="^\s*([eE]xpected|[iI]gnore).*"/>
+        </module>
+        <!--
+            Flag cases that fall through in a switch, unless one of these comments
+            (by itself) is the last non-empty line in the case:
+            - // fallthru
+            - // fall thru
+            - // fall-thru
+            - // fallthrough
+            - // fall through
+            - // fall-through
+            - // fallsthrough
+            - // falls through
+            - // falls-through
+          -->
+        <module name="FallThrough"/>
+        <!-- Classes with only private constructors should be final -->
+        <module name="FinalClass"/>
+        <!-- 
+            Log local variables or parameters (including enchanced-for variable) that 
+            never change but are not final
+          -->
+        <module name="FinalLocalVariable">
+            <property name="severity" value="info"/>
+            <property name="tokens" value="VARIABLE_DEF,PARAMETER_DEF"/>
+            <property name="validateEnhancedForLoopVariable" value="true"/>
+        </module>
+        <!-- 
+            Local variable or parameter should not hide class field, unless 
+            it's a parameter of a setter or constructor
+          -->
+        <module name="HiddenField">
+            <property name="ignoreConstructorParameter" value="true"/>
+            <property name="ignoreSetter" value="true"/>
+            <property name="setterCanReturnItsClass" value="true"/>
+        </module>
+        <!-- Classes with only static members should not have a public constructor -->
+        <module name="HideUtilityClassConstructor"/>
+        <!-- Non-abstract classes should define a constructor (not use the default one) -->
+        <module name="MissingCtor">
+            <property name="severity" value="warning"/>
+        </module>
+        <!-- A method using @inheritDoc must have @Override -->
+        <module name="MissingOverride"/>
+        <!-- Must have default case in switch -->
+        <module name="MissingSwitchDefault"/>
+        <!-- Avoid modifying loop variable in for (except enhanced-for) -->
+        <module name="ModifiedControlVariable">
+            <property name="skipEnhancedForLoopVariable" value="true"/>
+        </module>
+        <!-- Exception classes must be immutable (only final fields) -->
+        <module name="MutableException"/>
+        <!-- 
+            Code blocks must have braces. Loops with empty bodies may
+            omit the braces and just use a semicolon.
+          -->
+        <module name="NeedBraces">
+            <property name="allowEmptyLoopBody" value="true"/>
+        </module>
+        <!-- Flag files with no code -->
+        <module name="NoCodeInFile"/>
+        <!-- A type should be in a file of the same name -->
+        <module name="OuterTypeFilename"/>
+        <!-- Classes should declare a package, that should match the directory structure -->
+        <module name="PackageDeclaration"/>
+        <!-- Flag TODO comments -->
+        <module name="TodoComment">
+            <property name="severity" value="info"/>
+            <property name="format" value="(TODO:)|(FIXME)"/>
+        </module>
+        <!-- Flag classes with a main() method -->
+        <module name="UncommentedMain">
+            <property name="severity" value="warning"/>
+            <property name="excludedClasses" value="\.Application$"/> <!-- Allow launcher -->
+        </module>
+        <!-- Use upper case L for long int literals -->
+        <module name="UpperEll"/>
+        <!-- Avoid public non-final variables -->
+        <module name="VisibilityModifier">
+            <property name="packageAllowed" value="true"/>
+            <property name="protectedAllowed" value="true"/>
+            <property name="allowPublicFinalFields" value="true"/>
+        </module>
+
+    </module>
+    
+    <!-- Illegal code check -->
+    <module name="TreeWalker">
+        
+        <!-- Never catch Error, Exception, RuntimeException, or Throwable -->
+        <module name="IllegalCatch"/>
+        <!-- Never use language keywords for identifiers -->
+        <module name="IllegalIdentifierName"/>
+        <!-- Don't import sun.* (internal) packages -->
+        <module name="IllegalImport"/>
+        <!-- Don't declare a method throws Error, RuntimeException, or Throwable -->
+        <module name="IllegalThrows">
+            <property name="ignoreOverriddenMethods" value="false"/>
+        </module>
+        <!-- Log usage of labels or native methods -->
+        <module name="IllegalToken">
+            <property name="severity" value="info"/>
+            <property name="tokens" value="LABELED_STAT,LITERAL_NATIVE"/>
+        </module>
+        <!-- Don't use concrete types for variable type, use the interface -->
+        <module name="IllegalType">
+            <property name="illegalClassNames"
+                value="HashMap, java.util.HashMap, 
+                       HashSet, java.util.HashSet, 
+                       LinkedHashMap, java.util.LinkedHashMap, 
+                       LinkedHashSet, java.util.LinkedHashSet, 
+                       TreeMap, java.util.TreeMap, 
+                       TreeSet, java.util.TreeSet,
+                       GregorianCalendar, java.util.GregorianCalendar,
+                       Hashtable, java.util.Hashtable,
+                       ArrayList, java.util.ArrayList,
+                       LinkedList, java.util.LinkedList,
+                       Vector, java.util.Vector"/>
+        </module>
+        <!-- Don't do assignments as subexpressions -->
+        <module name="InnerAssignment"/>
+        <!-- Don't use magic numbers outside of annotations -->
+        <module name="MagicNumber">
+            <property name="severity" value="warning"/>
+            <property name="ignoreAnnotation" value="true"/>
+        </module>
+        <!-- Don't declare multiple variables in the same statement or line -->
+        <module name="MultipleVariableDeclarations"/>
+        <!-- Don't override clone() or finalize() -->
+        <module name="NoClone"/>
+        <module name="NoFinalizer"/>
+        <!--
+            Only do one statement per line. In try-with-resources,
+            a variable reference does not count as a statement. 
+          -->
+        <module name="OneStatementPerLine">
+            <property name="treatTryResourcesAsStatement" value="true"/>
+        </module>
+        <!-- Only have one outer type per file -->
+        <module name="OneTopLevelClass"/>
+        <module name="OuterTypeNumber"/>
+
+    </module>
+</module>
