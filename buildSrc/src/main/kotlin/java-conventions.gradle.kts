@@ -38,6 +38,10 @@ if (strictMode) {
     checkstyle {
         maxWarnings = 0
     }
+
+    tasks.named<JavaCompile>("compileJava") {
+        options.compilerArgs.add("-Werror")
+    }
 }
 
 // Checker Framework configuration
