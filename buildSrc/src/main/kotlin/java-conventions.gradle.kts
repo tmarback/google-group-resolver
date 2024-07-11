@@ -23,6 +23,12 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+val style by extra { findProperty("style") == "true" }
+
+tasks.withType<Checkstyle> {
+    ignoreFailures = !style
+}
+
 val strictMode by extra { findProperty("strict") == "true" }
 
 if (strictMode) {
