@@ -15,6 +15,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+    runtimeOnly("ch.qos.logback:logback-classic")
 
     // Test dependencies
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
