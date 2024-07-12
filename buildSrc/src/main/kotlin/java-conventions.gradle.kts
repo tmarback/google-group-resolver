@@ -60,6 +60,7 @@ dependencies {
     val checkerVersion = "3.45.0"
     compileOnly("org.checkerframework:checker-qual:$checkerVersion")
     testCompileOnly("org.checkerframework:checker-qual:$checkerVersion")
+    implementation("org.checkerframework:checker-util:$checkerVersion")
     checkerFramework("org.checkerframework:checker:$checkerVersion")
 }
 
