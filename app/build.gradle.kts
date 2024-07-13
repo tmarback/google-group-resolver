@@ -14,6 +14,9 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 
+    implementation(libs.google.oauth.client)
+    implementation(libs.google.api.directory)
+
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("ch.qos.logback:logback-classic")
 
