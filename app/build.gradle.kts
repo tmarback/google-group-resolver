@@ -17,8 +17,14 @@ dependencies {
     implementation(libs.google.oauth.client)
     implementation(libs.google.api.directory)
 
+    implementation(libs.apache.commons.collections)
+
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     runtimeOnly("ch.qos.logback:logback-classic")
+
+    // Test fixture
+    testFixturesImplementation(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES))
+    testFixturesImplementation("org.springframework.boot:spring-boot-starter-test")
 
     // Test dependencies
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

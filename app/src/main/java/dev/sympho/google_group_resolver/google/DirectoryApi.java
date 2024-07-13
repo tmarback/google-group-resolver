@@ -115,6 +115,9 @@ public interface DirectoryApi {
         /** The response status code. */
         public final int code;
 
+        /** The response error message. */
+        public final @Nullable String message;
+
         /**
          * Creates a new instance.
          *
@@ -123,9 +126,10 @@ public interface DirectoryApi {
          */
         public RequestFailedException( final int code, final @Nullable String message ) {
 
-            super( message );
+            super( "Request failed (%d): %s".formatted( code, message == null ? "" : message ) );
 
             this.code = code;
+            this.message = message;
 
         }
 

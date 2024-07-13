@@ -39,4 +39,8 @@
     <suppress checks="AnnotationUseStyle"
         files="test.*"
     />
+    <!-- Test files don't need to fully document methods -->
+    <suppress checks="JavadocMethod"
+        files="test.*"
+    />
 </suppressions>

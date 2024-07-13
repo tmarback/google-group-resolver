@@ -1,5 +1,6 @@
 plugins {
 	java
+    `java-test-fixtures`
     checkstyle
     id("org.checkerframework")
 }
@@ -26,6 +27,8 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+    systemProperty("junit.jupiter.execution.parallel.enabled", true)
+    systemProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", true)
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -59,6 +62,7 @@ val checker by extra { findProperty("checker") == "true" }
 dependencies {
     val checkerVersion = "3.45.0"
     compileOnly("org.checkerframework:checker-qual:$checkerVersion")
+    testFixturesImplementation("org.checkerframework:checker-qual:$checkerVersion")
     testCompileOnly("org.checkerframework:checker-qual:$checkerVersion")
     implementation("org.checkerframework:checker-util:$checkerVersion")
     checkerFramework("org.checkerframework:checker:$checkerVersion")
