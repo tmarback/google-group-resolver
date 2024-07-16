@@ -4,43 +4,43 @@
 <suppressions>
     <!-- Allow long test files -->
     <suppress checks="FileLength"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Allow test packages to not be documented -->
     <suppress checks="JavadocPackage"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Test classes do not need constructors -->
     <suppress checks="MissingCtor"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <suppress checks="HideUtilityClassConstructor"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Allow unrestricted string literals and magic numbers in test classes -->
     <suppress checks="MultipleStringLiterals"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <suppress checks="MagicNumber"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Allow static and star imports in test classes -->
     <suppress checks="AvoidStaticImport"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <suppress checks="AvoidStarImport"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Allow any order on tests for better test ordering -->
     <suppress checks="InnerTypeLast"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Allow test annotations to use any style for maintainability of parameter lists -->
     <suppress checks="AnnotationUseStyle"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
     <!-- Test files don't need to fully document methods -->
     <suppress checks="JavadocMethod"
-        files="test.*"
+        files="(test|integrationTest).*"
     />
 </suppressions>

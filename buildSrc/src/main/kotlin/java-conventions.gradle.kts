@@ -21,14 +21,46 @@ repositories {
 	mavenCentral()
 }
 
-dependencies {
-    implementation("org.slf4j:slf4j-api")
+testing {
+    suites { 
+        withType(JvmTestSuite::class).configureEach { 
+            useJUnitJupiter() 
+
+            targets {
+                all {
+                    testTask.configure { 
+                        systemProperty("junit.jupiter.execution.parallel.enabled", true)
+                        systemProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", true)
+                    }
+                }
+            }
+        }
+
+        val test by getting(JvmTestSuite::class) { 
+            // Default and common is enough
+        }
+
+        val integrationTest by registering(JvmTestSuite::class) { 
+            testType.set(TestSuiteType.INTEGRATION_TEST)
+
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project()))
+            }
+
+            targets { 
+                all {
+                    testTask.configure {
+                        shouldRunAfter(test)
+                    }
+                }
+            }
+        }
+    }
 }
 
-tasks.withType<Test> {
-	useJUnitPlatform()
-    systemProperty("junit.jupiter.execution.parallel.enabled", true)
-    systemProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", true)
+tasks.named("check") { 
+    dependsOn(testing.suites.named("integrationTest"))
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -58,14 +90,23 @@ if (strictMode) {
 // Checker Framework configuration
 
 val checker by extra { findProperty("checker") == "true" }
+val checkerVersion by extra("3.45.0")
 
 dependencies {
-    val checkerVersion = "3.45.0"
     compileOnly("org.checkerframework:checker-qual:$checkerVersion")
     testFixturesImplementation("org.checkerframework:checker-qual:$checkerVersion")
-    testCompileOnly("org.checkerframework:checker-qual:$checkerVersion")
     implementation("org.checkerframework:checker-util:$checkerVersion")
     checkerFramework("org.checkerframework:checker:$checkerVersion")
+}
+
+testing {
+    suites { 
+        withType(JvmTestSuite::class).configureEach { 
+            dependencies {
+                compileOnly("org.checkerframework:checker-qual:$checkerVersion")
+            }
+        }
+    }
 }
 
 val stubDir by extra { rootProject.layout.projectDirectory.dir("stubs") }
