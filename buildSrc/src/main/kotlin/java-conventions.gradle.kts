@@ -30,6 +30,7 @@ testing {
                 all {
                     testTask.configure { 
                         systemProperty("junit.jupiter.execution.parallel.enabled", true)
+                        systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
                         systemProperty("reactor.schedulers.defaultBoundedElasticOnVirtualThreads", true)
                     }
                 }

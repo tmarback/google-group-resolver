@@ -20,12 +20,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.sympho.google_group_resolver.CustomResourceLocks;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -204,6 +206,7 @@ public class DirectoryServiceProviderTest {
          * Tests doing multiple queries to the provider with a single batch query.
          */
         @Test
+        @ResourceLock( CustomResourceLocks.SCHEDULERS )
         public void testAllBatchedSingle() throws IOException {
 
             StepVerifier.withVirtualTime( () -> {
@@ -245,6 +248,7 @@ public class DirectoryServiceProviderTest {
          * Tests doing multiple queries to the provider with multiple batch queries.
          */
         @Test
+        @ResourceLock( CustomResourceLocks.SCHEDULERS )
         public void testAllBatchedSplit() throws IOException {
 
             final var batchSize = 2;

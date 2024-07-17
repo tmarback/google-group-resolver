@@ -50,6 +50,7 @@ testing {
             dependencies {
                 implementation("org.springframework.boot:spring-boot-starter-test")
                 implementation("io.projectreactor:reactor-test")
+                implementation("io.projectreactor.addons:reactor-extra")
             }
         }
 
