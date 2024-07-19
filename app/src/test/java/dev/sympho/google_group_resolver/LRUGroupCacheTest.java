@@ -2,7 +2,6 @@ package dev.sympho.google_group_resolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -12,28 +11,17 @@ import org.apache.commons.collections4.ListUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.ResourceLock;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.sympho.google_group_resolver.google.DirectoryService;
 import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
-import reactor.test.scheduler.VirtualTimeScheduler;
 
 /**
  * Unit tests for {@link LRUGroupCache}.
  */
-@ExtendWith( MockitoExtension.class )
-@Timeout( 5 )
-@ResourceLock( CustomResourceLocks.SCHEDULERS ) // Scheduler set up globally
-public class LRUGroupCacheTest {
+public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
     /** The time an entry stays in valid status. */
     private static final Duration TTL_VALID = Duration.ofMinutes( 1 );
@@ -47,30 +35,10 @@ public class LRUGroupCacheTest {
     /** The cache capacity. */
     private static final int CAPACITY = 10;
 
-    /** The directory service. */
-    @Mock
-    DirectoryService directory;
+    @Override
+    protected LRUGroupCache makeIUT() {
 
-    /** The virtual scheduler to use. */
-    VirtualTimeScheduler scheduler;
-
-    /** The clock to use. */
-    Clock clock;
-
-    /** The instance being tested. */
-    LRUGroupCache iut;
-
-    /**
-     * Sets up test instances.
-     */
-    @BeforeEach
-    public void setUp() {
-
-        scheduler = VirtualTimeScheduler.getOrSet( true );
-
-        clock = SchedulerClock.of( scheduler );
-
-        iut = new LRUGroupCache( 
+        return new LRUGroupCache( 
                 directory, 
                 TTL_VALID, 
                 TTL_STALE, 
@@ -79,62 +47,25 @@ public class LRUGroupCacheTest {
                 clock 
         );
 
+    }
+
+    /**
+     * Starts the cleaner job.
+     */
+    @BeforeEach
+    public void startCleaner() {
+
         iut.startCleaner();
 
     }
 
     /**
-     * Stops running test services.
+     * Stops the cleaner job.
      */
     @AfterEach
-    public void tearDown() {
+    public void stopCleaner() {
 
         iut.stopCleaner();
-
-        VirtualTimeScheduler.reset();
-
-    }
-
-    /**
-     * Tests fetching a single entry one time.
-     */
-    @Test
-    public void testFetchOneOnce() {
-
-        final var email = "test@foo.bar";
-        final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
-        );
-
-        final var delay = Duration.ofSeconds( 1 );
-
-        StepVerifier.withVirtualTime( () -> {
-
-            Mockito.when( directory.getGroups( email ) )
-                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
-
-            final var entry = iut.get( email );
-
-            assertThat( entry.valid() ).isFalse();
-            assertThat( entry.value() ).isNull();
-
-            return entry.latest()
-                    .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) );
-
-        }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .verifyComplete();
-
-        final var entry = iut.get( email );
-        assertThat( entry.valid() ).isTrue();
-        assertThat( entry.value() ).isNotNull()
-                .containsExactlyInAnyOrderElementsOf( groups );
 
     }
 
@@ -194,75 +125,6 @@ public class LRUGroupCacheTest {
                         .containsExactlyInAnyOrderElementsOf( groups ) 
                 )
                 .verifyComplete();
-
-    }
-
-    /**
-     * Tests fetching many entries one time.
-     */
-    @Test
-    public void testFetchManyOnce() {
-
-        final var cases = List.of(
-                Map.entry( "test-1@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "C", "c@foo.bar" )
-                ) ),
-                Map.entry( "test-2@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "D", "d@foo.bar" ), 
-                        new Group( "E", "e@foo.bar" )
-                ) ),
-                Map.entry( "test-3@foo.bar", List.of(
-                        new Group( "F", "f@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "G", "g@foo.bar" )
-                ) )
-        );
-
-        final var delay = Duration.ofSeconds( 1 );
-
-        final var verifier = StepVerifier.withVirtualTime( () -> {
-
-            for ( final var entry : cases ) {
-
-                final var email = entry.getKey();
-                final var groups = entry.getValue();
-
-                Mockito.when( directory.getGroups( email ) )
-                        .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
-
-            }
-
-            final var entries = cases.stream()
-                    .map( e -> {
-
-                        final var entry = iut.get( e.getKey() );
-
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
-
-                        return entry.latest();
-
-                    } ).toList();
-
-            return Flux.fromIterable( entries ).flatMap( e -> e )
-                    .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( cases.size() ) );
-
-        }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay );
-
-        for ( final var entry : cases ) {
-
-            verifier.assertNext( result -> assertThat( result )
-                    .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
-            );
-
-        }
-        
-        verifier.verifyComplete();
 
     }
 
