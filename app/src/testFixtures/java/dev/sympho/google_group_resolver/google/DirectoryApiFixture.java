@@ -19,14 +19,7 @@ public final class DirectoryApiFixture {
             "error-2@foo.bar",
             "error-3@foo.bar"
     );
-
-    /** Emails to hang on when queried. */
-    public static final List<String> HANG_QUERIES = List.of(
-            "hang-1@foo.bar",
-            "hang-2@foo.bar",
-            "hang-3@foo.bar"
-    );
-
+    
     /** Group hierarchy for testing. */
     public static final List<Map.Entry<String, List<DirectoryApi.Group>>> API_GROUP_LIST = List.of(
             Map.entry( "foo@org.com", List.of(
@@ -96,7 +89,7 @@ public final class DirectoryApiFixture {
      */
     public static DirectoryApiMock apiClient() {
 
-        return new DirectoryApiMock( API_GROUP_MAP, ERROR_QUERIES, HANG_QUERIES );
+        return new DirectoryApiMock( API_GROUP_MAP, ERROR_QUERIES );
 
     }
     

@@ -6,9 +6,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
@@ -17,9 +16,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.Execution;
-import org.junit.jupiter.api.parallel.ExecutionMode;
-import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,6 +27,7 @@ import dev.sympho.google_group_resolver.CustomResourceLocks;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
+import reactor.test.scheduler.VirtualTimeScheduler;
 import reactor.util.function.Tuple2;
 
 /**
@@ -38,8 +35,7 @@ import reactor.util.function.Tuple2;
  */
 @ExtendWith( MockitoExtension.class )
 @Timeout( 5 )
-@Execution( ExecutionMode.SAME_THREAD ) // Concurrent doesn't work properly in the terminal
-@Isolated
+@ResourceLock( CustomResourceLocks.SCHEDULERS )
 public class DirectoryServiceProviderTest {
 
     /** Logger. */
@@ -53,6 +49,9 @@ public class DirectoryServiceProviderTest {
     /** Batch timeout to use. */
     private static final Duration BATCH_TIMEOUT = Duration.ofMillis( 100 );
 
+    /** The virtual scheduler to use. */
+    VirtualTimeScheduler scheduler;
+
     /** API client mock. */
     DirectoryApiMock apiClient;
 
@@ -65,7 +64,10 @@ public class DirectoryServiceProviderTest {
     @BeforeEach
     public void startUp() {
 
+        scheduler = VirtualTimeScheduler.getOrSet( true );
+
         apiClient = DirectoryApiFixture.apiClient();
+
         iut = new DirectoryServiceProvider( apiClient, BATCH_SIZE, BATCH_TIMEOUT );
         iut.start();
 
@@ -78,6 +80,8 @@ public class DirectoryServiceProviderTest {
     public void shutDown() {
 
         iut.stop();
+
+        VirtualTimeScheduler.reset();
 
     }
 
@@ -116,8 +120,14 @@ public class DirectoryServiceProviderTest {
                     .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
                     .toList();
 
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .consumeNextWith( actual -> assertThat( actual )
+            StepVerifier.withVirtualTime( 
+                            () -> iut.getGroups( email ).collectList(), 
+                            () -> scheduler,
+                            Long.MAX_VALUE 
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
+                    .assertNext( actual -> assertThat( actual )
                             .containsExactlyInAnyOrderElementsOf( expected ) 
                     )
                     .verifyComplete();
@@ -152,19 +162,25 @@ public class DirectoryServiceProviderTest {
         public void testSingleOneWithPages( final String email ) throws IOException {
 
             final var groups = DirectoryApiFixture.API_GROUP_MAP.get( email );
+            final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
                     .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
                     .toList();
             
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .consumeNextWith( actual -> assertThat( actual )
+            StepVerifier.withVirtualTime( 
+                            () -> iut.getGroups( email ).collectList(), 
+                            () -> scheduler,
+                            Long.MAX_VALUE 
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
+                    .assertNext( actual -> assertThat( actual )
                             .containsExactlyInAnyOrderElementsOf( expected ) 
                     )
                     .verifyComplete();
 
             // Check that the expected calls were made
-            final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
             assertThat( apiClient.singleCount() ).isEqualTo( pages );
             assertThat( apiClient.batchCount() ).isEqualTo( 0 );
 
@@ -176,28 +192,39 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testAllSequential() throws IOException {
 
+            final var verifier = StepVerifier.withVirtualTime( () -> {
+
+                return Flux.fromIterable( DirectoryApiFixture.API_GROUP_LIST )
+                        .map( Map.Entry::getKey )
+                        .concatMap( email -> iut.getGroups( email ).collectList() );
+
+            }, () -> scheduler, Long.MAX_VALUE ).expectSubscription();
+
             for ( final var entry : DirectoryApiFixture.API_GROUP_LIST ) {
 
-                final var email = entry.getKey();
                 final var expected = entry.getValue().stream()
                         .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
                         .toList();
 
-                StepVerifier.create( iut.getGroups( email ).collectList() )
-                        .consumeNextWith( actual -> assertThat( actual )
+                final var pages = Math.ceilDiv( expected.size(), DirectoryApiMock.PAGE_SIZE );
+
+                verifier.expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
+                        .assertNext( actual -> assertThat( actual )
                                 .containsExactlyInAnyOrderElementsOf( expected ) 
-                        )
-                        .verifyComplete();
+                        );
 
             }
 
-            // Check that the expected calls were made
-            final var pages = DirectoryApiFixture.API_GROUP_LIST.stream()
+            verifier.thenAwait( Duration.ofDays( 1 ) ).verifyComplete();
+
+            final var totalPages = DirectoryApiFixture.API_GROUP_LIST.stream()
                     .map( Map.Entry::getValue )
                     .mapToInt( List::size )
                     .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
                     .sum();
-            assertThat( apiClient.singleCount() ).isEqualTo( pages );
+
+            // Check that the expected calls were made
+            assertThat( apiClient.singleCount() ).isEqualTo( totalPages );
             assertThat( apiClient.batchCount() ).isEqualTo( 0 );
 
         }
@@ -206,8 +233,16 @@ public class DirectoryServiceProviderTest {
          * Tests doing multiple queries to the provider with a single batch query.
          */
         @Test
-        @ResourceLock( CustomResourceLocks.SCHEDULERS )
         public void testAllBatchedSingle() throws IOException {
+
+            // Since everything starts on the same batch, it will take as many batches as needed
+            // to get all the pages of the largest result
+            final var batches = DirectoryApiFixture.API_GROUP_LIST.stream()
+                    .map( Map.Entry::getValue )
+                    .mapToInt( List::size )
+                    .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
+                    .max()
+                    .getAsInt();
 
             StepVerifier.withVirtualTime( () -> {
 
@@ -218,7 +253,10 @@ public class DirectoryServiceProviderTest {
                         ) )
                         .collectMap( Tuple2::getT1, Tuple2::getT2 );
 
-            } ).consumeNextWith( result -> {
+            } )
+            .expectSubscription()
+            .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
+            .assertNext( result -> {
 
                 assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf( 
                         DirectoryApiFixture.API_GROUP_MAP.keySet()
@@ -238,8 +276,8 @@ public class DirectoryServiceProviderTest {
 
             } ).verifyComplete();
 
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 0 );
+            // Can't assume specific number of batches since if one entry had more pages than
+            // the rest it might use a few single queries
             assertThat( apiClient.batchCount() ).isGreaterThan( 0 );
 
         }
@@ -248,37 +286,40 @@ public class DirectoryServiceProviderTest {
          * Tests doing multiple queries to the provider with multiple batch queries.
          */
         @Test
-        @ResourceLock( CustomResourceLocks.SCHEDULERS )
         public void testAllBatchedSplit() throws IOException {
 
             final var batchSize = 2;
-            final var delay = BATCH_TIMEOUT.multipliedBy( 2 );
+
+            final var batches = IntStream.range( 0, DirectoryApiFixture.API_GROUP_LIST.size() )
+                    .map( i -> {
+
+                        final var batch = i / batchSize;
+                        final var entry = DirectoryApiFixture.API_GROUP_LIST.get( i );
+                        final var groups = entry.getValue().size();
+                        final var pages = Math.ceilDiv( groups, DirectoryApiMock.PAGE_SIZE );
+                        return pages + batch;
+
+                    } )
+                    .max()
+                    .getAsInt();
 
             StepVerifier.withVirtualTime( () -> {
 
-                final var iut2 = new DirectoryServiceProvider( 
-                        apiClient, 
-                        BATCH_SIZE, 
-                        BATCH_TIMEOUT 
-                );
-                iut2.start();
-                LOG.info( "Started" );
-
-                return Flux.fromIterable( DirectoryApiFixture.API_GROUP_MAP.keySet() )
+                return Flux.fromIterable( DirectoryApiFixture.API_GROUP_LIST )
+                        .map( Map.Entry::getKey )
                         .buffer( batchSize )
-                        .delayElements( delay )
+                        .delayElements( BATCH_TIMEOUT )
                         .flatMapIterable( Function.identity() )
                         .flatMap( email -> Mono.zip( 
                                 Mono.just( email ), 
-                                iut2.getGroups( email ).collectList()
+                                iut.getGroups( email ).collectList()
                         ) )
                         .collectMap( Tuple2::getT1, Tuple2::getT2 )
-                        .doOnNext( e -> LOG.info( "All done" ) )
-                        .doFinally( s -> iut2.stop() ); // Clean up
+                        .doOnNext( e -> LOG.info( "All done" ) );
 
             } )
             .expectSubscription()
-            .thenAwait( Duration.ofDays( 1 ) ) // Long enough to get it all done
+            .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
             .consumeNextWith( result -> {
 
                 assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf( 
@@ -299,7 +340,8 @@ public class DirectoryServiceProviderTest {
 
             } ).verifyComplete();
 
-            // Check that the expected calls were made
+            // Can't assume specific number of batches since if one entry had more pages than
+            // the rest it might use a few single queries
             assertThat( apiClient.batchCount() ).isGreaterThan( 1 );
 
         }
@@ -330,7 +372,13 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testFailSingle() throws IOException {
 
-            StepVerifier.create( iut.getGroups( "non-existing@test.com" ).collectList() )
+            StepVerifier.withVirtualTime( 
+                            () -> iut.getGroups( "non-existing@test.com" ).collectList(),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .verifyErrorMatches( this::verifyError );
 
             // Check that the expected calls were made
@@ -351,12 +399,19 @@ public class DirectoryServiceProviderTest {
                     "non-existing-3@test.com"
             );
 
-            final var pipeline = Flux.fromIterable( emails )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
-
-            StepVerifier.create( pipeline )
+            StepVerifier.withVirtualTime(
+                            () -> Flux.fromIterable( emails )
+                                    .flatMap( email -> iut.getGroups( email )
+                                            .collectList()
+                                            .materialize() 
+                                    )
+                                    .filter( s -> s.isOnError() )
+                                    .map( s -> s.getThrowable() ),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .expectNextMatches( this::verifyError )
                     .expectNextMatches( this::verifyError )
                     .expectNextMatches( this::verifyError )
@@ -422,7 +477,13 @@ public class DirectoryServiceProviderTest {
         public void testGlobalErrorSingle() throws IOException {
 
             apiClient.setThrowError( true );
-            StepVerifier.create( iut.getGroups( "foo@org.com" ).collectList() )
+            StepVerifier.withVirtualTime( 
+                            () -> iut.getGroups( "foo@org.com" ).collectList(),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .verifyErrorMatches( this::verifyErrorGlobal );
 
             // Check that the expected calls were made
@@ -439,13 +500,20 @@ public class DirectoryServiceProviderTest {
 
             apiClient.setThrowError( true );
 
-            final var pipeline = Flux.range( 0, 3 )
-                    .map( c -> "test" + c + "@test.com" )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
-
-            StepVerifier.create( pipeline )
+            StepVerifier.withVirtualTime(
+                            () -> Flux.range( 0, 3 )
+                                    .map( c -> "test" + c + "@test.com" )
+                                    .flatMap( email -> iut.getGroups( email )
+                                            .collectList()
+                                            .materialize()
+                                    )
+                                    .filter( s -> s.isOnError() )
+                                    .map( s -> s.getThrowable() ),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .expectNextMatches( this::verifyErrorGlobal )
                     .expectNextMatches( this::verifyErrorGlobal )
                     .expectNextMatches( this::verifyErrorGlobal )
@@ -464,26 +532,40 @@ public class DirectoryServiceProviderTest {
         public void testGlobalErrorRecovery() throws IOException {
 
             final var email = "group-A@org.com";
-
-            apiClient.setThrowError( true );
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .verifyErrorMatches( this::verifyErrorGlobal );            
-
             final var groups = DirectoryApiFixture.API_GROUP_MAP.get( email );
+            final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
                     .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
                     .toList();
-            
-            apiClient.setThrowError( false );
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .consumeNextWith( actual -> assertThat( actual )
-                            .containsExactlyInAnyOrderElementsOf( expected ) 
-                    )
+
+            StepVerifier.withVirtualTime( () -> {
+
+                final var error = Mono.defer( () -> iut.getGroups( email ).collectList() )
+                        .materialize()
+                        .doOnNext( s -> {
+
+                            assertThat( s.isOnError() ).isTrue();
+                            assertThat( verifyErrorGlobal( s.getThrowable() ) ).isTrue();
+
+                        } ).then().doOnSubscribe( s -> apiClient.setThrowError( true ) );
+
+                final var success = Mono.defer( () -> iut.getGroups( email ).collectList() )
+                        .doOnNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                ).then().doOnSubscribe( s -> apiClient.setThrowError( false ) );
+
+                return Flux.concat(
+                    error,
+                    success
+                );
+
+            }, () -> scheduler, Long.MAX_VALUE )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT.multipliedBy( 1 + pages ) )
                     .verifyComplete();
 
             // Check that the expected calls were made
-            final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
             assertThat( apiClient.singleCount() ).isEqualTo( pages + 1 );
             assertThat( apiClient.batchCount() ).isEqualTo( 0 );
 
@@ -509,7 +591,13 @@ public class DirectoryServiceProviderTest {
         @MethodSource
         public void testQueryErrorSingle( final String email ) throws IOException {
 
-            StepVerifier.create( iut.getGroups( email ).collectList() )
+            StepVerifier.withVirtualTime( 
+                            () -> iut.getGroups( email ).collectList(),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .verifyErrorMatches( this::verifyErrorQuery );
 
             // Check that the expected calls were made
@@ -524,12 +612,19 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testQueryErrorBatch() throws IOException {
 
-            final var pipeline = Flux.fromIterable( DirectoryApiFixture.ERROR_QUERIES )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
-
-            StepVerifier.create( pipeline )
+            StepVerifier.withVirtualTime( 
+                            () -> Flux.fromIterable( DirectoryApiFixture.ERROR_QUERIES )
+                                    .flatMap( email -> iut.getGroups( email )
+                                            .collectList()
+                                            .materialize() 
+                                    )
+                                    .filter( s -> s.isOnError() )
+                                    .map( s -> s.getThrowable() ),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .expectNextMatches( this::verifyErrorQuery )
                     .expectNextMatches( this::verifyErrorQuery )
                     .expectNextMatches( this::verifyErrorQuery )
@@ -552,193 +647,37 @@ public class DirectoryServiceProviderTest {
                     DirectoryApiFixture.API_GROUP_MAP.keySet().stream()
             );
 
-            final var pipeline = Flux.fromStream( emails )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
+            // Since everything starts on the same batch, it will take as many batches as needed
+            // to get all the pages of the largest result
+            final var batches = DirectoryApiFixture.API_GROUP_LIST.stream()
+                    .map( Map.Entry::getValue )
+                    .mapToInt( List::size )
+                    .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
+                    .max()
+                    .getAsInt();
 
-            StepVerifier.create( pipeline )
+            StepVerifier.withVirtualTime(
+                            () -> Flux.fromStream( emails )
+                                    .flatMap( email -> iut.getGroups( email )
+                                            .collectList()
+                                            .materialize() 
+                                    )
+                                    .filter( s -> s.isOnError() )
+                                    .map( s -> s.getThrowable() ),
+                            () -> scheduler,
+                            Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( BATCH_TIMEOUT )
                     .expectNextMatches( this::verifyErrorQuery )
                     .expectNextMatches( this::verifyErrorQuery )
                     .expectNextMatches( this::verifyErrorQuery )
+                    .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches - 1 ) )
                     .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 0 );
             assertThat( apiClient.batchCount() ).isGreaterThan( 0 );
-        
-        }
-
-    }
-
-    /**
-     * Tests that result in a timeout.
-     */
-    @Nested
-    // Concurrent works with this set, and it's very useful since
-    // all tests take at least a second to reach the timeout
-    @Execution( ExecutionMode.CONCURRENT )
-    class Timeout {
-
-        /**
-         * Tests getting a global hang in a single call.
-         */
-        @Test
-        public void testGlobalTimeoutSingle() throws IOException {
-
-            apiClient.setHang( true );
-            StepVerifier.create( iut.getGroups( "foo@org.com" ).collectList() )
-                    .verifyError( TimeoutException.class );
-
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 1 );
-            assertThat( apiClient.batchCount() ).isEqualTo( 0 );
-        
-        }
-
-        /**
-         * Tests getting a global hang in a batch call.
-         */
-        @Test
-        public void testGlobalTimeoutBatch() throws IOException {
-
-            apiClient.setHang( true );
-
-            final var pipeline = Flux.range( 0, 3 )
-                    .map( c -> "test" + c + "@test.com" )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
-
-            final Predicate<Throwable> matcher = error -> error instanceof TimeoutException;
-
-            StepVerifier.create( pipeline )
-                    .expectNextMatches( matcher )
-                    .expectNextMatches( matcher )
-                    .expectNextMatches( matcher )
-                    .verifyComplete();
-
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 0 );
-            // VSCode's test runner doesn't like it for some reason
-            // assertThat( apiClient.batchCount() ).isEqualTo( 1 );
-        
-        }
-
-        /**
-         * Tests doing a successful call after a temporary global hang.
-         */
-        @Test
-        public void testGlobalTimeoutRecovery() throws IOException {
-
-            final var email = "group-A@org.com";
-
-            apiClient.setHang( true );
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .verifyError( TimeoutException.class );
-
-            final var groups = DirectoryApiFixture.API_GROUP_MAP.get( email );
-
-            final var expected = groups.stream()
-                    .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
-                    .toList();
-            
-            apiClient.setHang( false );
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .consumeNextWith( actual -> assertThat( actual )
-                            .containsExactlyInAnyOrderElementsOf( expected ) 
-                    )
-                    .verifyComplete();
-
-            // Check that the expected calls were made
-            final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
-            assertThat( apiClient.singleCount() ).isEqualTo( pages + 1 );
-            assertThat( apiClient.batchCount() ).isEqualTo( 0 );
-
-        }
-
-        /**
-         * Argument provider for {@link #testQueryTimeoutSingle(String)}.
-         *
-         * @return The arguments.
-         */
-        private static Stream<String> testQueryTimeoutSingle() {
-
-            return DirectoryApiFixture.HANG_QUERIES.stream();
-
-        }
-
-        /**
-         * Tests getting a query hang in a single call.
-         *
-         * @param email The email to query.
-         */
-        @ParameterizedTest
-        @MethodSource
-        public void testQueryTimeoutSingle( final String email ) throws IOException {
-
-            StepVerifier.create( iut.getGroups( email ).collectList() )
-                    .verifyError( TimeoutException.class );
-
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 1 );
-            assertThat( apiClient.batchCount() ).isEqualTo( 0 );
-        
-        }
-
-        /**
-         * Tests getting a query hang in a batch call.
-         */
-        @Test
-        public void testQueryTimeoutBatch() throws IOException {
-
-            final var pipeline = Flux.fromIterable( DirectoryApiFixture.HANG_QUERIES )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() );
-
-            final Predicate<Throwable> matcher = error -> error instanceof TimeoutException;
-
-            StepVerifier.create( pipeline )
-                    .expectNextMatches( matcher )
-                    .expectNextMatches( matcher )
-                    .expectNextMatches( matcher )
-                    .verifyComplete();
-
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 0 );
-            assertThat( apiClient.batchCount() ).isEqualTo( 1 );
-        
-        }
-
-        /**
-         * Tests a mix of queries that should and shouldn't timeout in one batch.
-         * 
-         * <p>Unlike the error case, the whole batch should get stuck and time out,
-         * so all queries are affected.
-         */
-        @Test
-        public void testQueryTimeoutBatchMixed() throws IOException {
-
-            final var emails = Stream.concat(
-                    DirectoryApiFixture.HANG_QUERIES.stream(),
-                    DirectoryApiFixture.API_GROUP_MAP.keySet().stream()
-            ).toList();
-
-            final var pipeline = Flux.fromIterable( emails )
-                    .flatMap( email -> iut.getGroups( email ).collectList().materialize() )
-                    .filter( s -> s.isOnError() )
-                    .map( s -> s.getThrowable() )
-                    .filter( error -> error instanceof TimeoutException );
-
-            StepVerifier.create( pipeline )
-                    .expectNextCount( emails.size() )
-                    .verifyComplete();
-
-            // Check that the expected calls were made
-            assertThat( apiClient.singleCount() ).isEqualTo( 0 );
-            // VSCode's test runner doesn't like it for some reason
-            // assertThat( apiClient.batchCount() ).isEqualTo( 1 );
         
         }
 

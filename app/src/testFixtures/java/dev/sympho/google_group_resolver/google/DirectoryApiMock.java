@@ -1,7 +1,6 @@
 package dev.sympho.google_group_resolver.google;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -34,26 +33,15 @@ public class DirectoryApiMock implements DirectoryApi {
     /** The logger. */
     private static final Logger LOG = LoggerFactory.getLogger( DirectoryApiMock.class );
 
-    /** How long to hang for with {@link #setHang(boolean) hang mode} or a hang query. */
-    private static final Duration HANG_DURATION = DirectoryServiceProvider.RESULT_TIMEOUT
-            .plusMillis( 10 );
-
     /** The group mapping to use. */
     private final SequencedMap<String, List<DirectoryApi.Group>> groupMap;
 
     /** Queries to throw errors for. */
     private final List<String> errorQueries;
 
-    /** Queries to hang for. */
-    private final List<String> hangQueries;
-
     /** Whether to throw errors on calls. */
     @SuppressWarnings( "ExplicitInitialization" )
     private boolean throwError = false;
-
-    /** Whether to hang on calls. */
-    @SuppressWarnings( "ExplicitInitialization" )
-    private boolean hang = false;
 
     /** Counts number of single requests. */
     private AtomicInteger counterSingle = new AtomicInteger();
@@ -70,13 +58,11 @@ public class DirectoryApiMock implements DirectoryApi {
      */
     public DirectoryApiMock( 
             final Map<String, List<DirectoryApi.Group>> groups,
-            final List<String> errorQueries,
-            final List<String> hangQueries
+            final List<String> errorQueries
     ) {
 
         this.groupMap = Collections.unmodifiableSequencedMap( new LinkedHashMap<>( groups ) );
         this.errorQueries = List.copyOf( errorQueries );
-        this.hangQueries = List.copyOf( hangQueries );
 
     }
 
@@ -88,30 +74,6 @@ public class DirectoryApiMock implements DirectoryApi {
     public void setThrowError( final boolean throwError ) {
 
         this.throwError = throwError;
-
-    }
-
-    /**
-     * Sets whether method calls should hang.
-     *
-     * @param hang If {@code true}, operations will never return.
-     */
-    public void setHang( final boolean hang ) {
-
-        this.hang = hang;
-
-    }
-
-    /**
-     * Blocks forever.
-     */
-    private void hang() {
-
-        try {
-            Thread.sleep( HANG_DURATION.toMillis() );
-        } catch ( final InterruptedException ex ) {
-            LOG.error( "Sleep interrupted", ex );
-        }
 
     }
 
@@ -131,11 +93,6 @@ public class DirectoryApiMock implements DirectoryApi {
         if ( errorQueries.contains( email ) ) {
             LOG.trace( "Query error triggered" );
             throw new IllegalArgumentException( ERROR_MESSAGE_QUERY );
-        }
-
-        if ( hangQueries.contains( email ) ) {
-            LOG.trace( "Query hang triggered" );
-            hang();
         }
 
         final var groups = groupMap.get( email );
@@ -164,11 +121,6 @@ public class DirectoryApiMock implements DirectoryApi {
         if ( throwError ) {
             LOG.trace( "Global error triggered" );
             throw new IllegalArgumentException( ERROR_MESSAGE_GLOBAL );
-        }
-
-        if ( hang ) {
-            LOG.trace( "Global hang triggered" );
-            hang();
         }
 
     }
