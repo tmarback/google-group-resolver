@@ -38,7 +38,7 @@ public class DirectoryServiceProvider implements DirectoryService {
      * preventative measure in case some unexpected issue causes the task/emitter to be lost,
      * leading to the task never finishing.
      */
-    static final Duration RESULT_TIMEOUT = Duration.ofSeconds( 1 );
+    static final Duration RESULT_TIMEOUT = Duration.ofSeconds( 10 );
 
     /** Error message used when an unexpected exception is thrown. */
     static final String ERROR_UNEXPECTED_EXCEPTION = 
