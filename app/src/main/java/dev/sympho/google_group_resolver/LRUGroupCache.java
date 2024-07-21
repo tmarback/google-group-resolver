@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,7 +17,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 import org.checkerframework.checker.interning.qual.UsesObjectEquals;
-import org.checkerframework.checker.mustcall.qual.MustCallUnknown;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.util.NullnessUtil;
 import org.checkerframework.dataflow.qual.Pure;
@@ -95,12 +95,12 @@ public class LRUGroupCache implements GroupCache {
             final Clock clock 
     ) {
 
-        this.directory = directory;
-        this.ttlLive = ttlLive;
-        this.ttlStale = ttlStale;
-        this.cleanerPeriod = cleanerPeriod;
+        this.directory = Objects.requireNonNull( directory );
+        this.ttlLive = Objects.requireNonNull( ttlLive );
+        this.ttlStale = Objects.requireNonNull( ttlStale );
+        this.cleanerPeriod = Objects.requireNonNull( cleanerPeriod );
         this.capacity = capacity;
-        this.clock = clock;
+        this.clock = Objects.requireNonNull( clock );
 
     }
 
@@ -294,7 +294,7 @@ public class LRUGroupCache implements GroupCache {
          * When subscribed to, updates the cache entry in the backing map, 
          * and issues the new entry.
          */
-        private final Mono<@MustCallUnknown EntryImpl> next;
+        private final Mono<EntryImpl> next;
 
         /**
          * Creates a new entry.
@@ -319,7 +319,8 @@ public class LRUGroupCache implements GroupCache {
             this.next = Flux.defer( () -> directory.getGroups( email ) )
                     .collectList()
                     .map( groups -> new EntryImpl( email, groups ) )
-                    .map( entry -> {
+                    // Not having the explicit type makes Checker make some weird assumptions
+                    .<EntryImpl>map( entry -> {
                         
                         // It is technically possible, if an entry is kept in memory (which is not
                         // recommended), for the current entry to expire and get removed and later
@@ -357,6 +358,10 @@ public class LRUGroupCache implements GroupCache {
                         return updated;
 
                     } )
+                    .doOnSubscribe( s -> LOG.trace( 
+                            "Updating entry for {} ({})", 
+                            email, clock.millis() 
+                    ) )
                     .cache(); // Make sure it can only be executed once
             
         }

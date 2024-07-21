@@ -1,6 +1,7 @@
 package dev.sympho.google_group_resolver;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
@@ -27,7 +28,7 @@ public class PassthroughGroupCache implements GroupCache {
     @Pure
     public PassthroughGroupCache( final DirectoryService directory ) {
 
-        this.directory = directory;
+        this.directory = Objects.requireNonNull( directory );
 
     }
 
