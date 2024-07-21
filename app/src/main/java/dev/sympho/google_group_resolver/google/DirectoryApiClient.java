@@ -2,6 +2,7 @@ package dev.sympho.google_group_resolver.google;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.stream.Stream;
 
 import com.google.api.client.googleapis.batch.BatchCallback;
 import com.google.api.client.googleapis.json.GoogleJsonErrorContainer;
@@ -67,8 +68,10 @@ public class DirectoryApiClient implements DirectoryApi {
      */
     private static Result makeResult( final Groups result ) {
 
-        final var groups = result.getGroups().stream()
-                .map( group -> new Group( group.getName(), group.getEmail() ) );
+        final var groups = result.getGroups() == null
+                ? Stream.<Group>empty()
+                : result.getGroups().stream()
+                        .map( group -> new Group( group.getName(), group.getEmail() ) );
 
         final var nextToken = result.getNextPageToken();
         
