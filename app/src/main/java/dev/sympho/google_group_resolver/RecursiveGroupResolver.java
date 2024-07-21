@@ -7,6 +7,8 @@ import java.util.Objects;
 import java.util.Set;
 
 import org.checkerframework.dataflow.qual.Pure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.publisher.Flux;
@@ -15,6 +17,9 @@ import reactor.core.publisher.Flux;
  * Group resolver that includes indirect group memberships.
  */
 public class RecursiveGroupResolver implements GroupResolver {
+
+    /** Logger. */
+    private static final Logger LOG = LoggerFactory.getLogger( RecursiveGroupResolver.class );
 
     /** The cache to fetch from. */
     private final GroupCache cache;
@@ -87,7 +92,8 @@ public class RecursiveGroupResolver implements GroupResolver {
     public Flux<Group> getGroupsFor( final String email ) {
 
         return getGroupsFor( Objects.requireNonNull( email ), Set.of( email ) )
-                .distinct( Group::email ); // Don't allow duplicate emails through
+                .distinct( Group::email ) // Don't allow duplicate emails through
+                .doOnSubscribe( s -> LOG.trace( "Resolving groups for {}", email ) );
 
     }
     
