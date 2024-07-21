@@ -76,7 +76,9 @@ public class RecursiveGroupResolver implements GroupResolver {
             final var cached = entry.value();
             if ( cached != null ) { // Stale but non-expired cache value, use for prefetch
                 // Don't need to wait for the prefetch to finish, just let it run in the background
-                getIndirectGroups( cached, seen ).subscribe();
+                getIndirectGroups( cached, seen )
+                        .checkpoint( "Resolution (prefetch)" )
+                        .subscribe();
             }
         }
 
@@ -84,7 +86,8 @@ public class RecursiveGroupResolver implements GroupResolver {
                 .filter( g -> !g.isEmpty() ) // Skip processing nested if empty
                 .flatMapMany( groups -> Flux.fromIterable( groups )
                         .mergeWith( getIndirectGroups( groups, seen ) )
-                );
+                )
+                .checkpoint( "Resolution (fetch)" );
 
     }
 

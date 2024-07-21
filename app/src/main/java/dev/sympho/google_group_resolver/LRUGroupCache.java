@@ -362,6 +362,7 @@ public class LRUGroupCache implements GroupCache {
                             "Updating entry for {} ({})", 
                             email, clock.millis() 
                     ) )
+                    .checkpoint( "Cache update" )
                     .cache(); // Make sure it can only be executed once
             
         }

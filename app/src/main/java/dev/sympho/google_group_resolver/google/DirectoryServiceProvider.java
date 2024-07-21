@@ -310,7 +310,8 @@ public class DirectoryServiceProvider implements DirectoryService {
         // Submit group fetch as a task
         return Flux.<Group>push( emitter -> submitTask( new Task( email, emitter, null ) ) )
                 .publishOn( responseScheduler )
-                .timeout( RESULT_TIMEOUT ); // Timeout in case somehow the task gets lost
+                .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
+                .checkpoint( "Get groups" );
 
     }
 
