@@ -7,7 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SequencedMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -36,6 +39,9 @@ public class DirectoryApiMock implements DirectoryApi {
     /** The group mapping to use. */
     private final SequencedMap<String, List<DirectoryApi.Group>> groupMap;
 
+    /** Groups that some entity maps to but don't have their own mappings. */
+    private final Set<String> extraGroups;
+
     /** Queries to throw errors for. */
     private final List<String> errorQueries;
 
@@ -63,6 +69,13 @@ public class DirectoryApiMock implements DirectoryApi {
 
         this.groupMap = Collections.unmodifiableSequencedMap( new LinkedHashMap<>( groups ) );
         this.errorQueries = List.copyOf( errorQueries );
+
+        // Compute groups that exist but don't have their own mappings
+        this.extraGroups = this.groupMap.values().stream()
+                .flatMap( gs -> gs.stream() )
+                .map( DirectoryApi.Group::email )
+                .filter( email -> !this.groupMap.containsKey( email ) )
+                .collect( Collectors.toSet() );
 
     }
 
@@ -97,7 +110,11 @@ public class DirectoryApiMock implements DirectoryApi {
 
         final var groups = groupMap.get( email );
         if ( groups == null ) {
-            throw new DirectoryApi.RequestFailedException( 404, "Unknown email" );
+            if ( extraGroups.contains( email ) ) {
+                return new DirectoryApi.Result( Stream.empty(), null );
+            } else {
+                throw new DirectoryApi.RequestFailedException( 404, "Unknown email" );
+            }
         }
 
         // Calculate page bounds
