@@ -1,0 +1,45 @@
+# Workflow for testing that the code of incoming pull requests builds, validates, and follows style guidelines
+
+name: PR Checks
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+concurrency: pr-${{ github.ref }}
+jobs:
+  tests:
+    name: Check
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          submodules: 'recursive'
+
+      - name: Verify Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Set up Java and Maven
+        uses: actions/setup-java@v4
+        with: 
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
+          add-job-summary-as-pr-comment: always
+
+      - name: Run check task
+        run: ./gradlew check -Pchecker=true -Pstrict=true -Pstyle=true
