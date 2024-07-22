@@ -23,7 +23,6 @@ repositories {
 
 dependencyLocking {
     lockAllConfigurations()
-    lockMode = LockMode.STRICT
 }
 
 testing {
