@@ -98,11 +98,12 @@ jobs:
         with:
           image: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
           artifact-name: sbom.spdx.json
+          output-file: ./sbom.spdx.json
 
       - name: Generate SBOM attestation
         uses: actions/attest-sbom@v1
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.image.outputs.digest }}
-          sbom-path: sbom.spdx.json
+          sbom-path: ./sbom.spdx.json
           push-to-registry: true
