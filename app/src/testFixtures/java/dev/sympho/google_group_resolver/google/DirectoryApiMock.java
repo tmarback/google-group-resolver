@@ -37,7 +37,7 @@ public class DirectoryApiMock implements DirectoryApi {
     private static final Logger LOG = LoggerFactory.getLogger( DirectoryApiMock.class );
 
     /** The group mapping to use. */
-    private final SequencedMap<String, List<DirectoryApi.Group>> groupMap;
+    private final SequencedMap<String, List<DirectoryGroup>> groupMap;
 
     /** Groups that some entity maps to but don't have their own mappings. */
     private final Set<String> extraGroups;
@@ -63,7 +63,7 @@ public class DirectoryApiMock implements DirectoryApi {
      * @param hangQueries Queries to hang for.
      */
     public DirectoryApiMock( 
-            final Map<String, List<DirectoryApi.Group>> groups,
+            final Map<String, List<DirectoryGroup>> groups,
             final List<String> errorQueries
     ) {
 
@@ -73,7 +73,7 @@ public class DirectoryApiMock implements DirectoryApi {
         // Compute groups that exist but don't have their own mappings
         this.extraGroups = this.groupMap.values().stream()
                 .flatMap( gs -> gs.stream() )
-                .map( DirectoryApi.Group::email )
+                .map( DirectoryGroup::email )
                 .filter( email -> !this.groupMap.containsKey( email ) )
                 .collect( Collectors.toSet() );
 
