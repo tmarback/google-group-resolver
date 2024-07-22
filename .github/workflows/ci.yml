@@ -19,7 +19,8 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     permissions:
-      packages: write
+      packages: write # For the container
+      contents: write # For the dependency graph
     steps:
       - name: Checkout
         uses: actions/checkout@v4
