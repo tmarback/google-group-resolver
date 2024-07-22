@@ -4,7 +4,7 @@ google-api-directory = { module = "com.google.apis:google-api-services-admin-dir
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
 # For getting rid of annotation warnings
 spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
-bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "6.4.1" }
+bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "7.0.0" }
 osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 
 [plugins]
