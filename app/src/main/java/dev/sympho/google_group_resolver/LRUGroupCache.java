@@ -24,8 +24,8 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -288,7 +288,7 @@ public class LRUGroupCache implements GroupCache {
         private final AtomicReference<Instant> lastAccessed;
 
         /** The cached data, or {@code null} if this is a bootstrap entry. */
-        private final @Nullable List<Group> cached;
+        private final @Nullable List<DirectoryGroup> cached;
 
         /**
          * When subscribed to, updates the cache entry in the backing map, 
@@ -304,7 +304,7 @@ public class LRUGroupCache implements GroupCache {
          */
         private EntryImpl(
                 final String email,
-                final @Nullable List<Group> cached
+                final @Nullable List<DirectoryGroup> cached
         ) {
 
             this.cached = cached;
@@ -388,7 +388,7 @@ public class LRUGroupCache implements GroupCache {
         }
 
         @Override
-        public @Nullable List<Group> value() {
+        public @Nullable List<DirectoryGroup> value() {
 
             lastAccessed.set( clock.instant() );
 
@@ -398,7 +398,7 @@ public class LRUGroupCache implements GroupCache {
         }
 
         @Override
-        public Mono<List<Group>> latest() {
+        public Mono<List<DirectoryGroup>> latest() {
 
             // Call next() until finding a valid entry
             // Doing the expansion to follow the chain in case this is an old entry that got stored
@@ -409,7 +409,7 @@ public class LRUGroupCache implements GroupCache {
                     .expand( e -> e.valid() ? Mono.empty() : e.next )
                     .last()
                     .doOnNext( e -> e.lastAccessed.set( clock.instant() ) )
-                    .<List<Group>>map( e -> NullnessUtil.castNonNull( e.cached ) );
+                    .<List<DirectoryGroup>>map( e -> NullnessUtil.castNonNull( e.cached ) );
 
         }
 

@@ -17,8 +17,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.publisher.Flux;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
@@ -86,9 +86,9 @@ public abstract class GroupCacheTest<T extends GroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -125,19 +125,19 @@ public abstract class GroupCacheTest<T extends GroupCache> {
 
         final var cases = List.of(
                 Map.entry( "test-1@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "C", "c@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "C", "c@foo.bar" )
                 ) ),
                 Map.entry( "test-2@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "D", "d@foo.bar" ), 
-                        new Group( "E", "e@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "D", "d@foo.bar" ), 
+                        new DirectoryGroup( "E", "e@foo.bar" )
                 ) ),
                 Map.entry( "test-3@foo.bar", List.of(
-                        new Group( "F", "f@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "G", "g@foo.bar" )
+                        new DirectoryGroup( "F", "f@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "G", "g@foo.bar" )
                 ) )
         );
 

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -77,9 +77,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -136,19 +136,19 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var cases = List.of(
                 Map.entry( "test-1@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "C", "c@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "C", "c@foo.bar" )
                 ) ),
                 Map.entry( "test-2@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "D", "d@foo.bar" ), 
-                        new Group( "E", "e@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "D", "d@foo.bar" ), 
+                        new DirectoryGroup( "E", "e@foo.bar" )
                 ) ),
                 Map.entry( "test-3@foo.bar", List.of(
-                        new Group( "F", "f@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "G", "g@foo.bar" )
+                        new DirectoryGroup( "F", "f@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "G", "g@foo.bar" )
                 ) )
         );
 
@@ -220,14 +220,14 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
         final var newGroups = List.of( 
-                new Group( "D", "d@foo.bar" ), 
-                new Group( "E", "e@foo.bar" ), 
-                new Group( "F", "f@foo.bar" )
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" ), 
+                new DirectoryGroup( "F", "f@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -294,9 +294,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -390,26 +390,26 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var extras = List.of(
                 Map.entry( "test-1@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "C", "c@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "C", "c@foo.bar" )
                 ) ),
                 Map.entry( "test-2@foo.bar", List.of(
-                        new Group( "A", "a@foo.bar" ), 
-                        new Group( "D", "d@foo.bar" ), 
-                        new Group( "E", "e@foo.bar" )
+                        new DirectoryGroup( "A", "a@foo.bar" ), 
+                        new DirectoryGroup( "D", "d@foo.bar" ), 
+                        new DirectoryGroup( "E", "e@foo.bar" )
                 ) ),
                 Map.entry( "test-3@foo.bar", List.of(
-                        new Group( "F", "f@foo.bar" ), 
-                        new Group( "B", "b@foo.bar" ), 
-                        new Group( "G", "g@foo.bar" )
+                        new DirectoryGroup( "F", "f@foo.bar" ), 
+                        new DirectoryGroup( "B", "b@foo.bar" ), 
+                        new DirectoryGroup( "G", "g@foo.bar" )
                 ) )
         );
 
@@ -531,9 +531,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + excess )
                 .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new Group( "A" + i, "a" + i + "@foo.bar" ), 
-                        new Group( "B" + i, "b" + i + "@foo.bar" ), 
-                        new Group( "C" + i, "c" + i + "@foo.bar" )
+                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
                 ) ) )
                 .toList();
 
@@ -658,9 +658,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + excess )
                 .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new Group( "A" + i, "a" + i + "@foo.bar" ), 
-                        new Group( "B" + i, "b" + i + "@foo.bar" ), 
-                        new Group( "C" + i, "c" + i + "@foo.bar" )
+                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
                 ) ) )
                 .toList();
 
@@ -800,9 +800,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + expired + excess )
                 .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new Group( "A" + i, "a" + i + "@foo.bar" ), 
-                        new Group( "B" + i, "b" + i + "@foo.bar" ), 
-                        new Group( "C" + i, "c" + i + "@foo.bar" )
+                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
                 ) ) )
                 .toList();
 
@@ -946,9 +946,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -1000,14 +1000,14 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new Group( "A", "a@foo.bar" ), 
-                new Group( "B", "b@foo.bar" ), 
-                new Group( "C", "c@foo.bar" )
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
         );
         final var newGroups = List.of( 
-                new Group( "D", "d@foo.bar" ), 
-                new Group( "E", "e@foo.bar" ), 
-                new Group( "F", "f@foo.bar" )
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" ), 
+                new DirectoryGroup( "F", "f@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );

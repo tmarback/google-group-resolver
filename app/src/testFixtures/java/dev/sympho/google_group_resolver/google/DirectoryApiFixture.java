@@ -85,14 +85,14 @@ public final class DirectoryApiFixture {
     }
 
     /** Group hierarchy for testing. */
-    public static final List<Map.Entry<String, List<DirectoryService.Group>>> SERVICE_GROUP_LIST;
+    public static final List<Map.Entry<String, List<DirectoryGroup>>> SERVICE_GROUP_LIST;
 
     static {
 
         SERVICE_GROUP_LIST = API_GROUP_LIST.stream().map( e -> Map.entry( 
                 e.getKey(), 
                 e.getValue().stream()
-                        .map( group -> new DirectoryService.Group(
+                        .map( group -> new DirectoryGroup(
                                 group.name(),
                                 group.email()
                         ) )
@@ -102,11 +102,11 @@ public final class DirectoryApiFixture {
     }
 
     /** Mappings from email to groups. */
-    public static final SequencedMap<String, List<DirectoryService.Group>> SERVICE_GROUP_MAP;
+    public static final SequencedMap<String, List<DirectoryGroup>> SERVICE_GROUP_MAP;
 
     static {
 
-        final var map = LinkedHashMap.<String, List<DirectoryService.Group>>newLinkedHashMap( 
+        final var map = LinkedHashMap.<String, List<DirectoryGroup>>newLinkedHashMap( 
                 SERVICE_GROUP_LIST.size() 
         );
         SERVICE_GROUP_LIST.forEach( e -> map.put( e.getKey(), e.getValue() ) );
@@ -115,14 +115,14 @@ public final class DirectoryApiFixture {
     }
 
     /** Resolved groups (including indirect groups). */
-    public static final SequencedMap<String, List<DirectoryService.Group>> RESOLVED_GROUPS;
+    public static final SequencedMap<String, List<DirectoryGroup>> RESOLVED_GROUPS;
 
     /** Depth of group resolution (number of levels in the membership tree for a given email). */
     public static final SequencedMap<String, Integer> RESOLVED_GROUP_DEPTH;
 
     static {
 
-        final var map = LinkedHashMap.<String, List<DirectoryService.Group>>newLinkedHashMap( 
+        final var map = LinkedHashMap.<String, List<DirectoryGroup>>newLinkedHashMap( 
                 SERVICE_GROUP_LIST.size() 
         );
         final var depth = LinkedHashMap.<String, Integer>newLinkedHashMap( 
@@ -134,7 +134,7 @@ public final class DirectoryApiFixture {
             
             final var resolved = new ArrayList<>( entry.getValue() );
             final var resolvedEmails = resolved.stream()
-                    .map( DirectoryService.Group::email )
+                    .map( DirectoryGroup::email )
                     .toList();
             final var pending = new LinkedList<>( resolvedEmails.stream()
                     .map( e -> Tuples.of( e, 1 ) )
@@ -185,7 +185,7 @@ public final class DirectoryApiFixture {
         RESOLVED_GROUPS.forEach( ( email, groups ) -> map.put( 
                 email, 
                 groups.stream()
-                        .map( DirectoryService.Group::email )
+                        .map( DirectoryGroup::email )
                         .toList()
         ) );
         RESOLVED_GROUP_EMAILS = Collections.unmodifiableSequencedMap( map );

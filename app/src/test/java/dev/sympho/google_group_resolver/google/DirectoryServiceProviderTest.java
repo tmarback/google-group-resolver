@@ -117,7 +117,7 @@ public class DirectoryServiceProviderTest {
             final var groups = DirectoryApiFixture.API_GROUP_MAP.get( email );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                    .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                     .toList();
 
             StepVerifier.withVirtualTime( 
@@ -165,7 +165,7 @@ public class DirectoryServiceProviderTest {
             final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                    .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                     .toList();
             
             StepVerifier.withVirtualTime( 
@@ -203,7 +203,7 @@ public class DirectoryServiceProviderTest {
             for ( final var entry : DirectoryApiFixture.API_GROUP_LIST ) {
 
                 final var expected = entry.getValue().stream()
-                        .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                        .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                         .toList();
 
                 final var pages = Math.ceilDiv( expected.size(), DirectoryApiMock.PAGE_SIZE );
@@ -267,7 +267,7 @@ public class DirectoryServiceProviderTest {
                     final var expected = DirectoryApiFixture.API_GROUP_MAP
                             .get( entry.getKey() )
                             .stream()
-                            .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                            .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                             .toList();
                             
                     assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
@@ -331,7 +331,7 @@ public class DirectoryServiceProviderTest {
                     final var expected = DirectoryApiFixture.API_GROUP_MAP
                             .get( entry.getKey() )
                             .stream()
-                            .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                            .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                             .toList();
                             
                     assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
@@ -536,7 +536,7 @@ public class DirectoryServiceProviderTest {
             final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryService.Group( g.name(), g.email() ) )
+                    .map( g -> new DirectoryGroup( g.name(), g.email() ) )
                     .toList();
 
             StepVerifier.withVirtualTime( () -> {

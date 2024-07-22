@@ -10,7 +10,7 @@ import org.checkerframework.dataflow.qual.Pure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import reactor.core.publisher.Flux;
 
 /**
@@ -48,11 +48,14 @@ public class RecursiveGroupResolver implements GroupResolver {
      * @param seen The groups that were already visited and should be skipped if seen again.
      * @return The indirect groups.
      */
-    private Flux<Group> getIndirectGroups( final List<Group> groups, final Set<String> seen ) {
+    private Flux<DirectoryGroup> getIndirectGroups( 
+            final List<DirectoryGroup> groups, 
+            final Set<String> seen 
+    ) {
 
         final var updatedSeen = new HashSet<>( seen );
         final var newGroups = groups.stream()
-                .map( Group::email )
+                .map( DirectoryGroup::email )
                 .filter( updatedSeen::add )
                 .toList();
 
@@ -68,7 +71,7 @@ public class RecursiveGroupResolver implements GroupResolver {
      * @param seen The groups that were already visited and should be skipped if seen again.
      * @return The indirect groups.
      */
-    private Flux<Group> getGroupsFor( final String email, final Set<String> seen ) {
+    private Flux<DirectoryGroup> getGroupsFor( final String email, final Set<String> seen ) {
 
         final var entry = cache.get( email );
         
@@ -92,10 +95,10 @@ public class RecursiveGroupResolver implements GroupResolver {
     }
 
     @Override
-    public Flux<Group> getGroupsFor( final String email ) {
+    public Flux<DirectoryGroup> getGroupsFor( final String email ) {
 
         return getGroupsFor( Objects.requireNonNull( email ), Set.of( email ) )
-                .distinct( Group::email ) // Don't allow duplicate emails through
+                .distinct( DirectoryGroup::email ) // Don't allow duplicate emails through
                 .doOnSubscribe( s -> LOG.trace( "Resolving groups for {}", email ) );
 
     }
