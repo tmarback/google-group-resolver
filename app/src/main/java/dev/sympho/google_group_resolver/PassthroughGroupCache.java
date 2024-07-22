@@ -6,8 +6,8 @@ import java.util.Objects;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.publisher.Mono;
 
 /**
@@ -43,12 +43,12 @@ public class PassthroughGroupCache implements GroupCache {
             }
 
             @Override
-            public @Nullable List<Group> value() {
+            public @Nullable List<DirectoryGroup> value() {
                 return null;
             }
 
             @Override
-            public Mono<List<Group>> latest() {
+            public Mono<List<DirectoryGroup>> latest() {
                 return directory.getGroups( email ).collectList();
             }
 

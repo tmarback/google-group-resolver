@@ -6,7 +6,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import reactor.core.publisher.Mono;
 
 /**
@@ -72,7 +72,7 @@ public interface GroupCache {
          * @return The cached value, if any.
          */
         @SideEffectFree
-        @Nullable List<Group> value();
+        @Nullable List<DirectoryGroup> value();
             
         /**
          * Retrieves the latest group set of the entity cached under this entry. If this instance
@@ -88,7 +88,7 @@ public interface GroupCache {
          *          old entry instance that precedes many refreshes; it is strongly recommended
          *          to always fetch an entry and use it promptly rather than storing it.
          */
-        Mono<List<Group>> latest();
+        Mono<List<DirectoryGroup>> latest();
 
     }
     

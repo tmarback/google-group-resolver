@@ -1,6 +1,6 @@
 package dev.sympho.google_group_resolver;
 
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import reactor.core.publisher.Flux;
 
 /**
@@ -14,11 +14,12 @@ public interface GroupResolver {
      * @param email The email of the entity to resolve.
      * @return The groups that the given entity is a member of.
      * @implSpec The returned flux may <b>not</b> issue multiple groups with the same 
-     *           {@link Group#email() email} (i.e. each issued group must have a unique email).
-     *           In the case that the backing dataset contains duplicate emails (particularly in
-     *           the case that resolution queries a group more than once but its data is updated
-     *           in between those queries), the selection of which to issue is not defined.
+     *           {@link DirectoryGroup#email() email} (i.e. each issued group must have a unique 
+     *           email). In the case that the backing dataset contains duplicate emails 
+     *           (particularly in the case that resolution queries a group more than once but its 
+     *           data is updated in between those queries), the selection of which to issue is not 
+     *           defined.
      */
-    Flux<Group> getGroupsFor( String email );
+    Flux<DirectoryGroup> getGroupsFor( String email );
     
 }

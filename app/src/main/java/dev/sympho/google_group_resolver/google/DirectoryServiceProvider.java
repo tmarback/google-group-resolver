@@ -157,7 +157,7 @@ public class DirectoryServiceProvider implements DirectoryService {
         }
 
         result.groups()
-                .map( group -> new Group( group.name(), group.email() ) )
+                .map( group -> new DirectoryGroup( group.name(), group.email() ) )
                 .forEach( request.emitter()::next );
 
         final var nextToken = result.nextPageToken();
@@ -305,10 +305,12 @@ public class DirectoryServiceProvider implements DirectoryService {
     }
 
     @Override
-    public Flux<Group> getGroups( final String email ) {
+    public Flux<DirectoryGroup> getGroups( final String email ) {
 
         // Submit group fetch as a task
-        return Flux.<Group>push( emitter -> submitTask( new Task( email, emitter, null ) ) )
+        return Flux.<DirectoryGroup>push( emitter -> submitTask( 
+                        new Task( email, emitter, null ) 
+                ) )
                 .publishOn( responseScheduler )
                 .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
                 .checkpoint( "Get groups" );
@@ -324,7 +326,7 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private record Task(
             String email,
-            FluxSink<Group> emitter,
+            FluxSink<DirectoryGroup> emitter,
             @Nullable String nextPageToken
     ) {}
 

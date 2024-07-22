@@ -23,8 +23,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.sympho.google_group_resolver.google.DirectoryApiFixture;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
 import reactor.core.publisher.Flux;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
@@ -164,7 +164,10 @@ public class RecursiveGroupResolverTest {
 
             final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
 
-            StepVerifier.create( iut.getGroupsFor( email ).map( Group::email ).collectList() )
+            StepVerifier.create( iut.getGroupsFor( email )
+                            .map( DirectoryGroup::email )
+                            .collectList() 
+                    )
                     .assertNext( groups -> assertThat( groups ) 
                             .containsExactlyInAnyOrderElementsOf( expected )
                     )
@@ -183,7 +186,10 @@ public class RecursiveGroupResolverTest {
                 final var email = entry.getKey();
                 final var expected = entry.getValue();
 
-                StepVerifier.create( iut.getGroupsFor( email ).map( Group::email ).collectList() )
+                StepVerifier.create( iut.getGroupsFor( email )
+                                .map( DirectoryGroup::email )
+                                .collectList() 
+                        )
                         .assertNext( groups -> assertThat( groups ) 
                                 .containsExactlyInAnyOrderElementsOf( expected )
                         )
@@ -207,7 +213,7 @@ public class RecursiveGroupResolverTest {
                     final var expected = entry.getValue();
 
                     StepVerifier.create( iut.getGroupsFor( email )
-                                    .map( Group::email )
+                                    .map( DirectoryGroup::email )
                                     .collectList() 
                             )
                             .assertNext( groups -> assertThat( groups ) 
@@ -424,7 +430,7 @@ public class RecursiveGroupResolverTest {
 
                 StepVerifier.withVirtualTime(
                                 () -> iut.getGroupsFor( email )
-                                        .map( Group::email )
+                                        .map( DirectoryGroup::email )
                                         .collectList(),
                                 () -> scheduler,
                                 Long.MAX_VALUE
@@ -452,7 +458,7 @@ public class RecursiveGroupResolverTest {
                                                             .keySet() 
                                             )
                                             .flatMap( email -> iut.getGroupsFor( email )
-                                                    .map( Group::email )
+                                                    .map( DirectoryGroup::email )
                                                     .collectList()
                                             );
 
@@ -461,7 +467,7 @@ public class RecursiveGroupResolverTest {
                                                             .keySet() 
                                             )
                                             .concatMap( email -> iut.getGroupsFor( email )
-                                                    .map( Group::email )
+                                                    .map( DirectoryGroup::email )
                                                     .collectList()
                                             );
 
@@ -533,7 +539,7 @@ public class RecursiveGroupResolverTest {
                                 () -> {
                                     
                                     final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                            .map( Group::email )
+                                            .map( DirectoryGroup::email )
                                             .collectList();
 
                                     return Flux.concat(
@@ -595,7 +601,7 @@ public class RecursiveGroupResolverTest {
                                 () -> {
                                     
                                     final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                            .map( Group::email )
+                                            .map( DirectoryGroup::email )
                                             .collectList();
 
                                     return Flux.concat(

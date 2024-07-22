@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import dev.sympho.google_group_resolver.google.DirectoryService.Group;
+import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import reactor.core.publisher.Mono;
 
 /**
@@ -58,7 +58,7 @@ public class ResolveController {
      * @param groups The groups that the entity is a member of.
      */
     public record Response(
-            List<Group> groups
+            List<DirectoryGroup> groups
     ) {}
     
 }
