@@ -38,17 +38,6 @@ public interface DirectoryApi {
     void getGroupsBatch( Collection<BatchRequest> requests ) throws IllegalArgumentException;
 
     /**
-     * A group in the Workspaces directory.
-     *
-     * @param name The group name.
-     * @param email The group email.
-     */
-    record Group(
-            String name,
-            String email
-    ) {}
-
-    /**
      * The result of a group membership fetch request.
      * 
      * <p>One instance represents one page; there may be more results.
@@ -58,7 +47,7 @@ public interface DirectoryApi {
      *                      If there are no further results, {@code null}.
      */
     record Result(
-            Stream<Group> groups,
+            Stream<DirectoryGroup> groups,
             @Nullable String nextPageToken
     ) {}
 

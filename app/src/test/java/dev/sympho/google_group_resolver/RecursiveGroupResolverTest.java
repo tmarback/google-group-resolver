@@ -113,7 +113,7 @@ public class RecursiveGroupResolverTest {
 
                 final String email = invocation.getArgument( 0 );
 
-                final var groups = DirectoryApiFixture.SERVICE_GROUP_MAP.get( email );
+                final var groups = DirectoryApiFixture.GROUP_MAP.get( email );
                 final var result = groups == null ? Flux.empty() : Flux.fromIterable( groups );
 
                 return insertDelay ? result.delaySubscription( DELAY ) : result;

@@ -69,9 +69,9 @@ public class DirectoryApiClient implements DirectoryApi {
     private static Result makeResult( final Groups result ) {
 
         final var groups = result.getGroups() == null
-                ? Stream.<Group>empty()
+                ? Stream.<DirectoryGroup>empty()
                 : result.getGroups().stream()
-                        .map( group -> new Group( group.getName(), group.getEmail() ) );
+                        .map( group -> new DirectoryGroup( group.getName(), group.getEmail() ) );
 
         final var nextToken = result.getNextPageToken();
         
