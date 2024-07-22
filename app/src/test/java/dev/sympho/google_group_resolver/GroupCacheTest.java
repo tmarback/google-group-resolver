@@ -95,7 +95,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
 
         StepVerifier.withVirtualTime( () -> {
 
-            Mockito.when( directory.getGroups( email ) )
+            Mockito.when( directory.getGroupsFor( email ) )
                     .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             final var entry = iut.get( email );
@@ -150,7 +150,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
                 final var email = entry.getKey();
                 final var groups = entry.getValue();
 
-                Mockito.when( directory.getGroups( email ) )
+                Mockito.when( directory.getGroupsFor( email ) )
                         .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             }

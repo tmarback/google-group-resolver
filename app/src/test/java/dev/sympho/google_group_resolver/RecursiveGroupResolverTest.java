@@ -109,7 +109,7 @@ public class RecursiveGroupResolverTest {
          */
         protected void configureMock( final boolean insertDelay ) {
 
-            Mockito.when( directory.getGroups( anyString() ) ).thenAnswer( invocation -> {
+            Mockito.when( directory.getGroupsFor( anyString() ) ).thenAnswer( invocation -> {
 
                 final String email = invocation.getArgument( 0 );
 

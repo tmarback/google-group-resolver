@@ -21,21 +21,21 @@ public interface DirectoryApi {
      * @throws IOException if an expected error ocurred.
      * @throws RequestFailedException if the request failed.
      * @see Result#nextPageToken()
-     * @see #getGroupsBatch(Collection)
+     * @see #getGroupsForBatch(Collection)
      */
-    Result getGroups( 
+    Result getGroupsFor( 
             String email, 
             @Nullable String nextPageToken 
     ) throws IOException, RequestFailedException;
 
     /**
-     * Performs multiple instances of {@link #getGroups(String, String)} using a batch request.
+     * Performs multiple instances of {@link #getGroupsFor(String, String)} using a batch request.
      *
      * @param requests The requests to make in the batch request.
      * @throws IllegalArgumentException if the number of requests exceeds the maximum.
-     * @see #getGroups(String, String)
+     * @see #getGroupsFor(String, String)
      */
-    void getGroupsBatch( Collection<BatchRequest> requests ) throws IllegalArgumentException;
+    void getGroupsForBatch( Collection<BatchRequest> requests ) throws IllegalArgumentException;
 
     /**
      * The result of a group membership fetch request.
@@ -58,7 +58,7 @@ public interface DirectoryApi {
      * @param nextPageToken The token for the next page received by a previous request, or
      *                      {@code null} if this is the first request.
      * @param callback The callback to invoke for handling the result.
-     * @see DirectoryApi#getGroups(String, String)
+     * @see DirectoryApi#getGroupsFor(String, String)
      */
     record BatchRequest(
             String email,

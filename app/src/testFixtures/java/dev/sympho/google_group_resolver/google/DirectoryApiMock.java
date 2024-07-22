@@ -143,7 +143,7 @@ public class DirectoryApiMock implements DirectoryApi {
     }
 
     @Override
-    public Result getGroups( final String email, final @Nullable String nextPageToken )
+    public Result getGroupsFor( final String email, final @Nullable String nextPageToken )
             throws IOException, RequestFailedException {
 
         LOG.trace( "Mocking single {}:{}", email, nextPageToken );
@@ -157,7 +157,7 @@ public class DirectoryApiMock implements DirectoryApi {
 
     @Override
     @SuppressWarnings( "IllegalCatch" )
-    public void getGroupsBatch( final Collection<BatchRequest> requests )
+    public void getGroupsForBatch( final Collection<BatchRequest> requests )
             throws IllegalArgumentException {
 
         LOG.trace( "Mocking batch with {} elements", requests.size() );

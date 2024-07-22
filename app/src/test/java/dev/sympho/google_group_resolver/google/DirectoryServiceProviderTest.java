@@ -121,7 +121,7 @@ public class DirectoryServiceProviderTest {
                     .toList();
 
             StepVerifier.withVirtualTime( 
-                            () -> iut.getGroups( email ).collectList(), 
+                            () -> iut.getGroupsFor( email ).collectList(), 
                             () -> scheduler,
                             Long.MAX_VALUE 
                     )
@@ -169,7 +169,7 @@ public class DirectoryServiceProviderTest {
                     .toList();
             
             StepVerifier.withVirtualTime( 
-                            () -> iut.getGroups( email ).collectList(), 
+                            () -> iut.getGroupsFor( email ).collectList(), 
                             () -> scheduler,
                             Long.MAX_VALUE 
                     )
@@ -196,7 +196,7 @@ public class DirectoryServiceProviderTest {
 
                 return Flux.fromIterable( DirectoryApiFixture.GROUP_LIST )
                         .map( Map.Entry::getKey )
-                        .concatMap( email -> iut.getGroups( email ).collectList() );
+                        .concatMap( email -> iut.getGroupsFor( email ).collectList() );
 
             }, () -> scheduler, Long.MAX_VALUE ).expectSubscription();
 
@@ -249,7 +249,7 @@ public class DirectoryServiceProviderTest {
                 return Flux.fromIterable( DirectoryApiFixture.GROUP_MAP.keySet() )
                         .flatMap( email -> Mono.zip( 
                                 Mono.just( email ), 
-                                iut.getGroups( email ).collectList()
+                                iut.getGroupsFor( email ).collectList()
                         ) )
                         .collectMap( Tuple2::getT1, Tuple2::getT2 );
 
@@ -312,7 +312,7 @@ public class DirectoryServiceProviderTest {
                         .flatMapIterable( Function.identity() )
                         .flatMap( email -> Mono.zip( 
                                 Mono.just( email ), 
-                                iut.getGroups( email ).collectList()
+                                iut.getGroupsFor( email ).collectList()
                         ) )
                         .collectMap( Tuple2::getT1, Tuple2::getT2 )
                         .doOnNext( e -> LOG.info( "All done" ) );
@@ -373,7 +373,7 @@ public class DirectoryServiceProviderTest {
         public void testFailSingle() throws IOException {
 
             StepVerifier.withVirtualTime( 
-                            () -> iut.getGroups( "non-existing@test.com" ).collectList(),
+                            () -> iut.getGroupsFor( "non-existing@test.com" ).collectList(),
                             () -> scheduler,
                             Long.MAX_VALUE
                     )
@@ -401,7 +401,7 @@ public class DirectoryServiceProviderTest {
 
             StepVerifier.withVirtualTime(
                             () -> Flux.fromIterable( emails )
-                                    .flatMap( email -> iut.getGroups( email )
+                                    .flatMap( email -> iut.getGroupsFor( email )
                                             .collectList()
                                             .materialize() 
                                     )
@@ -478,7 +478,7 @@ public class DirectoryServiceProviderTest {
 
             apiClient.setThrowError( true );
             StepVerifier.withVirtualTime( 
-                            () -> iut.getGroups( "foo@org.com" ).collectList(),
+                            () -> iut.getGroupsFor( "foo@org.com" ).collectList(),
                             () -> scheduler,
                             Long.MAX_VALUE
                     )
@@ -503,7 +503,7 @@ public class DirectoryServiceProviderTest {
             StepVerifier.withVirtualTime(
                             () -> Flux.range( 0, 3 )
                                     .map( c -> "test" + c + "@test.com" )
-                                    .flatMap( email -> iut.getGroups( email )
+                                    .flatMap( email -> iut.getGroupsFor( email )
                                             .collectList()
                                             .materialize()
                                     )
@@ -541,7 +541,7 @@ public class DirectoryServiceProviderTest {
 
             StepVerifier.withVirtualTime( () -> {
 
-                final var error = Mono.defer( () -> iut.getGroups( email ).collectList() )
+                final var error = Mono.defer( () -> iut.getGroupsFor( email ).collectList() )
                         .materialize()
                         .doOnNext( s -> {
 
@@ -550,7 +550,7 @@ public class DirectoryServiceProviderTest {
 
                         } ).then().doOnSubscribe( s -> apiClient.setThrowError( true ) );
 
-                final var success = Mono.defer( () -> iut.getGroups( email ).collectList() )
+                final var success = Mono.defer( () -> iut.getGroupsFor( email ).collectList() )
                         .doOnNext( actual -> assertThat( actual )
                         .containsExactlyInAnyOrderElementsOf( expected )
                 ).then().doOnSubscribe( s -> apiClient.setThrowError( false ) );
@@ -592,7 +592,7 @@ public class DirectoryServiceProviderTest {
         public void testQueryErrorSingle( final String email ) throws IOException {
 
             StepVerifier.withVirtualTime( 
-                            () -> iut.getGroups( email ).collectList(),
+                            () -> iut.getGroupsFor( email ).collectList(),
                             () -> scheduler,
                             Long.MAX_VALUE
                     )
@@ -614,7 +614,7 @@ public class DirectoryServiceProviderTest {
 
             StepVerifier.withVirtualTime( 
                             () -> Flux.fromIterable( DirectoryApiFixture.ERROR_QUERIES )
-                                    .flatMap( email -> iut.getGroups( email )
+                                    .flatMap( email -> iut.getGroupsFor( email )
                                             .collectList()
                                             .materialize() 
                                     )
@@ -658,7 +658,7 @@ public class DirectoryServiceProviderTest {
 
             StepVerifier.withVirtualTime(
                             () -> Flux.fromStream( emails )
-                                    .flatMap( email -> iut.getGroups( email )
+                                    .flatMap( email -> iut.getGroupsFor( email )
                                             .collectList()
                                             .materialize() 
                                     )

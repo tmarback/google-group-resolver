@@ -316,7 +316,7 @@ public class LRUGroupCache implements GroupCache {
             this.lastAccessed = new AtomicReference<Instant>( now );
 
             // Prepare mono that updates the entry
-            this.next = Flux.defer( () -> directory.getGroups( email ) )
+            this.next = Flux.defer( () -> directory.getGroupsFor( email ) )
                     .collectList()
                     .map( groups -> new EntryImpl( email, groups ) )
                     // Not having the explicit type makes Checker make some weird assumptions

@@ -86,7 +86,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         StepVerifier.withVirtualTime( () -> {
 
-            Mockito.when( directory.getGroups( email ) )
+            Mockito.when( directory.getGroupsFor( email ) )
                     .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             final var entry = iut.get( email );
@@ -161,7 +161,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var email = entry.getKey();
                 final var groups = entry.getValue();
 
-                Mockito.when( directory.getGroups( email ) )
+                Mockito.when( directory.getGroupsFor( email ) )
                         .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             }
@@ -237,7 +237,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
             final var groupsFlux = Flux.fromIterable( groups ).delaySubscription( delay );
             final var newGroupsFlux = Flux.fromIterable( newGroups ).delaySubscription( delay );
-            Mockito.when( directory.getGroups( email ) )
+            Mockito.when( directory.getGroupsFor( email ) )
                     .thenReturn( groupsFlux, groupsFlux, groupsFlux, newGroupsFlux );
 
             final var entry = iut.get( email );
@@ -311,7 +311,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
-        Mockito.when( directory.getGroups( email ) )
+        Mockito.when( directory.getGroupsFor( email ) )
                 .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         StepVerifier.withVirtualTime( () -> {
@@ -426,7 +426,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
-        Mockito.when( directory.getGroups( email ) )
+        Mockito.when( directory.getGroupsFor( email ) )
                 .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         for ( final var entry : extras ) {
@@ -434,7 +434,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraEmail = entry.getKey();
             final var extraGroups = entry.getValue();
 
-            Mockito.when( directory.getGroups( extraEmail ) )
+            Mockito.when( directory.getGroupsFor( extraEmail ) )
                     .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
@@ -549,7 +549,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraEmail = entry.getKey();
             final var extraGroups = entry.getValue();
 
-            Mockito.when( directory.getGroups( extraEmail ) )
+            Mockito.when( directory.getGroupsFor( extraEmail ) )
                     .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
@@ -679,7 +679,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraEmail = entry.getKey();
             final var extraGroups = entry.getValue();
 
-            Mockito.when( directory.getGroups( extraEmail ) )
+            Mockito.when( directory.getGroupsFor( extraEmail ) )
                     .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
@@ -819,7 +819,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraEmail = entry.getKey();
             final var extraGroups = entry.getValue();
 
-            Mockito.when( directory.getGroups( extraEmail ) )
+            Mockito.when( directory.getGroupsFor( extraEmail ) )
                     .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
@@ -953,7 +953,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var delay = Duration.ofSeconds( 1 );
 
-        Mockito.when( directory.getGroups( email ) )
+        Mockito.when( directory.getGroupsFor( email ) )
                 .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         StepVerifier.withVirtualTime( () -> {
@@ -1016,7 +1016,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
             final var groupsFlux = Flux.fromIterable( groups ).delaySubscription( delay );
             final var newGroupsFlux = Flux.fromIterable( newGroups ).delaySubscription( delay );
-            Mockito.when( directory.getGroups( email ) )
+            Mockito.when( directory.getGroupsFor( email ) )
                     .thenReturn( groupsFlux, groupsFlux, newGroupsFlux, newGroupsFlux );
 
             final var entry = iut.get( email );

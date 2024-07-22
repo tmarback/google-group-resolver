@@ -13,7 +13,7 @@ public interface DirectoryService {
      * @param email The email of the user/group.
      * @return The groups.
      */
-    Flux<DirectoryGroup> getGroups( String email );
+    Flux<DirectoryGroup> getGroupsFor( String email );
 
     /**
      * Error indicating that an operation failed.

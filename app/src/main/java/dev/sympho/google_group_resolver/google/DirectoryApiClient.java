@@ -80,7 +80,7 @@ public class DirectoryApiClient implements DirectoryApi {
     }
 
     @Override
-    public Result getGroups( 
+    public Result getGroupsFor( 
             final String email, 
             final @Nullable String nextPageToken 
     ) throws IOException, RequestFailedException {
@@ -96,7 +96,7 @@ public class DirectoryApiClient implements DirectoryApi {
     }
 
     @Override
-    public void getGroupsBatch( 
+    public void getGroupsForBatch( 
             final Collection<BatchRequest> requests 
     ) throws IllegalArgumentException {
 

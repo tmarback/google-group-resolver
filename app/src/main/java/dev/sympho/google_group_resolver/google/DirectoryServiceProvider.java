@@ -30,7 +30,7 @@ import reactor.core.scheduler.Schedulers;
 public class DirectoryServiceProvider implements DirectoryService {
 
     /** 
-     * The maximum amount of time that the flux issued by {@link #getGroups(String)} waits
+     * The maximum amount of time that the flux issued by {@link #getGroupsFor(String)} waits
      * without new signals before timing out.
      * 
      * <p>Normally this timeout should never be reached, as the underlying HTTP requests eventually
@@ -220,7 +220,7 @@ public class DirectoryServiceProvider implements DirectoryService {
             final var task = tasks.get( 0 );
             LOG.debug( "Issuing standalone request for {}:{}", task.email(), task.nextPageToken() );
             try {
-                final var result = client.getGroups( task.email(), task.nextPageToken() );
+                final var result = client.getGroupsFor( task.email(), task.nextPageToken() );
                 handleResult( task, result );
             } catch ( final DirectoryApi.RequestFailedException ex ) {
                 handleFailure( task, ex );
@@ -243,7 +243,7 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         try {
             // Execute batch
-            client.getGroupsBatch( requests );
+            client.getGroupsForBatch( requests );
         } catch ( final Exception ex ) {
             LOG.error( "Batch request threw unexpected exception", ex );
             tasks.forEach( task -> handleError( task, ex ) );
@@ -305,7 +305,7 @@ public class DirectoryServiceProvider implements DirectoryService {
     }
 
     @Override
-    public Flux<DirectoryGroup> getGroups( final String email ) {
+    public Flux<DirectoryGroup> getGroupsFor( final String email ) {
 
         // Submit group fetch as a task
         return Flux.<DirectoryGroup>push( emitter -> submitTask( 

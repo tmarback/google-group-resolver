@@ -49,7 +49,7 @@ public class PassthroughGroupCache implements GroupCache {
 
             @Override
             public Mono<List<DirectoryGroup>> latest() {
-                return directory.getGroups( email ).collectList();
+                return directory.getGroupsFor( email ).collectList();
             }
 
         };
