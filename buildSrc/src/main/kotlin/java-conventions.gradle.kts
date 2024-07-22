@@ -21,6 +21,11 @@ repositories {
 	mavenCentral()
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+    lockMode = LockMode.STRICT
+}
+
 testing {
     suites { 
         withType(JvmTestSuite::class).configureEach { 
