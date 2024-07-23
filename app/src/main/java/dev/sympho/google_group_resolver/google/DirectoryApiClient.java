@@ -5,13 +5,18 @@ import java.util.Collection;
 import java.util.stream.Stream;
 
 import com.google.api.client.googleapis.batch.BatchCallback;
+import com.google.api.client.googleapis.batch.BatchRequest;
 import com.google.api.client.googleapis.json.GoogleJsonErrorContainer;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.services.directory.Directory;
+import com.google.api.services.directory.Directory.Groups.List;
+import com.google.api.services.directory.DirectoryRequest;
 import com.google.api.services.directory.model.Groups;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.dataflow.qual.Pure;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 
 /**
  * Client that access the Workspaces Directory API.
@@ -37,92 +42,98 @@ public class DirectoryApiClient implements DirectoryApi {
     }
 
     /**
-     * Prepares a group list request.
+     * Converts the given high-level API request into a handler request.
      *
-     * @param email The user/group email.
-     * @param nextPageToken The token for fetching the next page, if any.
-     * @return The prepared request.
-     * @throws IOException if an error occurred.
+     * @param source The source request.
+     * @return The converted request.
      */
-    private Directory.Groups.List makeRequest( 
-            final String email, 
-            final @Nullable String nextPageToken 
-    ) throws IOException {
+    private ApiRequest<?, ?, ?> convertRequest( final Request<?> source ) {
 
-        var request = client.groups().list()
-                .setUserKey( email );
-        
-        if ( nextPageToken != null ) {
-            request = request.setPageToken( nextPageToken );
-        }
+        return switch ( source ) {
 
-        return request;
+            case GroupMembershipRequest r -> new GroupMembershipApiRequest( r );
+
+        };
 
     }
 
     /**
-     * Prepares a result from the API response.
+     * Executes a request.
      *
-     * @param result The API response.
-     * @return The prepared result.
+     * @param <R> The interface result type.
+     * @param <G> The API result type.
+     * @param request The request to execute.
+     * @throws IOException if an error occurred.
      */
-    private static Result makeResult( final Groups result ) {
+    private <R extends @NonNull Result, G extends @NonNull Object> void executeRequest( 
+            final ApiRequest<R, G, ?> request 
+    ) throws IOException {
 
-        final var groups = result.getGroups() == null
-                ? Stream.<DirectoryGroup>empty()
-                : result.getGroups().stream()
-                        .map( group -> new DirectoryGroup( group.getName(), group.getEmail() ) );
-
-        final var nextToken = result.getNextPageToken();
-        
-        return new DirectoryApi.Result( groups, nextToken );
+        // var here makes Checker crash
+        final DirectoryRequest<G> rawRequest = request.createRequest( client );
+        final var result = rawRequest.execute();
+        request.issueResult( result );
 
     }
 
     @Override
-    public Result getGroupsFor( 
-            final String email, 
-            final @Nullable String nextPageToken 
-    ) throws IOException, RequestFailedException {
+    public void makeRequest( final Request<?> request ) {
 
-        final var request = makeRequest( email, nextPageToken );
         try {
-            final var result = request.execute();
-            return makeResult( result );
+            executeRequest( convertRequest( request ) );
         } catch ( final HttpResponseException ex ) {
-            throw new RequestFailedException( ex.getStatusCode(), ex.getMessage() );
+            request.callback().onFailure( 
+                    new RequestFailedException( ex.getStatusCode(), ex.getMessage() ) 
+            );
+        } catch ( final Exception ex ) {
+            request.callback().onError( ex );
         }
-        
+
+    }
+
+    /**
+     * Enqueues a request into a batch.
+     *
+     * @param <R> The interface result type.
+     * @param <G> The API result type.
+     * @param batch The batch to queue into.
+     * @param request The request to execute.
+     * @throws IOException if an error occurred.
+     */
+    private <R extends Result, G extends @NonNull Object> void enqueueRequest( 
+            final BatchRequest batch, 
+            final ApiRequest<R, G, ?> request 
+    ) throws IOException {
+
+        batch.queue( 
+                request.createRequest( client ).buildHttpRequest(),
+                request.dataClass(), 
+                GoogleJsonErrorContainer.class, 
+                request
+        );
+
     }
 
     @Override
-    public void getGroupsForBatch( 
-            final Collection<BatchRequest> requests 
-    ) throws IllegalArgumentException {
+    public void makeRequestBatch( final Collection<? extends Request<?>> requests ) {
 
         if ( requests.isEmpty() ) {
             throw new IllegalArgumentException( "No requests in batch" );
         }
 
         if ( requests.size() > MAX_BATCH_SIZE ) {
-            throw new IllegalArgumentException( 
+            final var ex = new IllegalArgumentException( 
                     "Too many requests for batch: " + requests.size() 
             );
+            requests.forEach( request -> request.callback().onError( ex ) );
+            throw ex;
         }
 
         final var batch = client.batch();
 
         final var queued = requests.stream().filter( request -> {
             try {
-                batch.queue( 
-                        makeRequest( 
-                            request.email(), 
-                            request.nextPageToken() 
-                        ).buildHttpRequest(),
-                        Groups.class, 
-                        GoogleJsonErrorContainer.class, 
-                        new RequestCallback( request.callback() ) 
-                );
+                enqueueRequest( batch, convertRequest( request ) );
                 return true;
             } catch ( final Exception ex ) {
                 request.callback().onError( ex );
@@ -139,26 +150,76 @@ public class DirectoryApiClient implements DirectoryApi {
     }
 
     /**
-     * Callback for the batch request.
+     * A request to make to the API.
      *
-     * @param callback The callback to foward results to.
+     * @param <R> The interface result type.
+     * @param <G> The API result type.
+     * @param <D> The API request type.
      */
-    private record RequestCallback(
-            Callback callback
-    ) implements BatchCallback<Groups, GoogleJsonErrorContainer> {
+    private interface ApiRequest<
+                    R extends @NonNull Result, 
+                    G extends @NonNull Object, 
+                    D extends @NonNull DirectoryRequest<G>
+            > extends BatchCallback<G, GoogleJsonErrorContainer> {
+
+        /**
+         * The underlying interface request.
+         *
+         * @return The request.
+         */
+        @Pure
+        Request<R> sourceRequest();
+
+        /**
+         * The API data class.
+         *
+         * @return The data class.
+         */
+        @Pure
+        Class<G> dataClass();
+
+        /**
+         * Creates the request object.
+         *
+         * @param directory The API client to use.
+         * @return The request.
+         * @throws IOException if an error occurred.
+         */
+        @SideEffectFree
+        D createRequest( Directory directory ) throws IOException;
+
+        /**
+         * Parses the API result.
+         *
+         * @param raw The API result.
+         * @return The interface result.
+         */
+        @SideEffectFree
+        R parseResult( G raw );
+
+        /**
+         * Issues a result to the callback.
+         *
+         * @param result The API result.
+         */
+        default void issueResult( final G result ) {
+
+            sourceRequest().callback().onSuccess( parseResult( result ) );
+
+        }
 
         @Override
-        public void onSuccess( 
-                final Groups result, 
+        default void onSuccess( 
+                final G result, 
                 final HttpHeaders responseHeaders 
         ) throws IOException {
 
-            callback.onSuccess( makeResult( result ) );
+            issueResult( result );
             
         }
 
         @Override
-        public void onFailure( 
+        default void onFailure( 
                 final GoogleJsonErrorContainer error, 
                 final HttpHeaders responseHeaders 
         ) throws IOException {
@@ -166,7 +227,55 @@ public class DirectoryApiClient implements DirectoryApi {
             final var code = error.getError().getCode();
             final var message = error.getError().getMessage();
 
-            callback.onFailure( new RequestFailedException( code, message ) );
+            sourceRequest().callback().onFailure( new RequestFailedException( code, message ) );
+
+        }
+
+    }
+
+    /**
+     * API request for {@link GroupMembershipRequest}.
+     *
+     * @param sourceRequest The underlying interface request.
+     */
+    private record GroupMembershipApiRequest(
+            GroupMembershipRequest sourceRequest
+    ) implements ApiRequest<ListResult<DirectoryGroup>, Groups, Directory.Groups.List> {
+
+        @Override
+        public Class<Groups> dataClass() {
+            return Groups.class;
+        }
+
+        @Override
+        public List createRequest( final Directory directory ) throws IOException {
+
+            var request = directory.groups().list()
+                    .setUserKey( sourceRequest.email() );
+            
+            final var token = sourceRequest.nextPageToken();
+            if ( token != null ) {
+                request = request.setPageToken( token );
+            }
+
+            return request;
+
+        }
+
+        @Override
+        public ListResult<DirectoryGroup> parseResult( final Groups raw ) {
+
+            final var groups = raw.getGroups() == null
+                    ? Stream.<DirectoryGroup>empty()
+                    : raw.getGroups().stream()
+                            .map( group -> new DirectoryGroup( 
+                                    group.getName(), 
+                                    group.getEmail() 
+                            ) );
+
+            final var nextToken = raw.getNextPageToken();
+            
+            return new ListResult<>( groups.toList(), nextToken );
 
         }
 

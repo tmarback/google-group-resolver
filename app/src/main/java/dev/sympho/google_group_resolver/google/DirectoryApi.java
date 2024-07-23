@@ -1,10 +1,12 @@
 package dev.sympho.google_group_resolver.google;
 
-import java.io.IOException;
 import java.util.Collection;
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.Objects;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
 
 /**
  * Interface for accessing the Workspaces Directory API.
@@ -12,71 +14,50 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface DirectoryApi {
 
     /**
-     * Retrieves the groups that a user or group is member of, including indirect memberships.
+     * Makes a request to the API.
      *
-     * @param email The email of the user/group.
-     * @param nextPageToken The token for the next page received by a previous request, or
-     *                      {@code null} if this is the first request.
-     * @return The retrieval result.
-     * @throws IOException if an expected error ocurred.
-     * @throws RequestFailedException if the request failed.
-     * @see Result#nextPageToken()
-     * @see #getGroupsForBatch(Collection)
+     * @param request The request to make.
      */
-    Result getGroupsFor( 
-            String email, 
-            @Nullable String nextPageToken 
-    ) throws IOException, RequestFailedException;
+    void makeRequest( Request<?> request );
 
     /**
-     * Performs multiple instances of {@link #getGroupsFor(String, String)} using a batch request.
+     * Makes multiple requests to the API in a batch.
      *
-     * @param requests The requests to make in the batch request.
-     * @throws IllegalArgumentException if the number of requests exceeds the maximum.
-     * @see #getGroupsFor(String, String)
+     * @param requests The requests to make.
      */
-    void getGroupsForBatch( Collection<BatchRequest> requests ) throws IllegalArgumentException;
+    void makeRequestBatch( Collection<? extends Request<?>> requests );
 
     /**
-     * The result of a group membership fetch request.
-     * 
-     * <p>One instance represents one page; there may be more results.
-     *
-     * @param groups The groups.
-     * @param nextPageToken The token to use to fetch the next page of requests.
-     *                      If there are no further results, {@code null}.
+     * A result returned by the API.
      */
-    record Result(
-            Stream<DirectoryGroup> groups,
+    sealed interface Result permits ListResult {}
+
+    /**
+     * A result that contains a sequence of data.
+     *
+     * @param <V> The data type.
+     * @param values The values.
+     * @param nextPageToken The token to use to fetch the next page of data, or {@code null} if
+     *                      there are no more pages.
+     */
+    record ListResult<V extends @NonNull Object>(
+            List<V> values,
             @Nullable String nextPageToken
-    ) {}
+    ) implements Result {}
 
     /**
-     * A request to be executed as part of a batch.
+     * Callback for handling the result of a request.
      *
-     * @param email The email of the user/group.
-     * @param nextPageToken The token for the next page received by a previous request, or
-     *                      {@code null} if this is the first request.
-     * @param callback The callback to invoke for handling the result.
-     * @see DirectoryApi#getGroupsFor(String, String)
+     * @param <R> The result type.
      */
-    record BatchRequest(
-            String email,
-            @Nullable String nextPageToken,
-            Callback callback
-    ) {}
-
-    /**
-     * Callback for an individual request within a batch request.
-     */
-    interface Callback {
+    interface Callback<R extends Result> {
 
         /**
          * Invoked if the request was successful.
          *
          * @param result The result of the request.
          */
-        void onSuccess( Result result );
+        void onSuccess( R result );
 
         /**
          * Invoked if the request failed.
@@ -91,6 +72,51 @@ public interface DirectoryApi {
          * @param error The error.
          */
         void onError( Exception error );
+
+    }
+
+    /**
+     * A request to the API.
+     *
+     * @param <R> The result type.
+     */
+    sealed interface Request<R extends Result> permits GroupMembershipRequest {
+
+        /**
+         * The callback to invoke to handle the result of the request.
+         *
+         * @return The callback.
+         */
+        @Pure
+        Callback<R> callback();
+
+    }
+
+    /**
+     * A request to fetch the groups that an entity is a member of.
+     *
+     * @param email The email of the user/group.
+     * @param nextPageToken The token for the next page received by a previous request, or
+     *                      {@code null} if this is the first request.
+     * @param callback The callback to invoke for handling the result.
+     * @see DirectoryApi#makeRequest(Request)
+     * @see DirectoryApi#makeRequestBatch(Collection)
+     */
+    record GroupMembershipRequest(
+            String email,
+            @Nullable String nextPageToken,
+            Callback<ListResult<DirectoryGroup>> callback
+    ) implements Request<ListResult<DirectoryGroup>> {
+
+        @Override
+        public String toString() {
+
+            return "GroupMembershipRequest[email=%s, nextPageToken=%s]".formatted( 
+                    email, 
+                    Objects.requireNonNullElse( nextPageToken, "null" )
+            );
+
+        }
 
     }
 

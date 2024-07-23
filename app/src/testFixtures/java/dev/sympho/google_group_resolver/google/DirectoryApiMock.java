@@ -1,6 +1,5 @@
 package dev.sympho.google_group_resolver.google;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -9,8 +8,8 @@ import java.util.Map;
 import java.util.SequencedMap;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
@@ -91,17 +90,20 @@ public class DirectoryApiMock implements DirectoryApi {
     }
 
     /**
-     * Resolves a group query.
+     * Resolves a group membership query.
      *
-     * @param email The email to query.
-     * @param pageToken The page token.
+     * @param request The query request.
      * @return The query result.
      * @throws DirectoryApi.RequestFailedException if the query failed.
      */
-    private DirectoryApi.Result query( final String email, final @Nullable String pageToken )
-            throws DirectoryApi.RequestFailedException {
+    private DirectoryApi.ListResult<DirectoryGroup> queryGroupMembership( 
+            final DirectoryApi.GroupMembershipRequest request 
+    ) throws DirectoryApi.RequestFailedException {
 
-        LOG.trace( "Mock querying {}:{}", email, pageToken );
+        final String email = request.email();
+        final @Nullable String pageToken = request.nextPageToken();
+
+        LOG.trace( "Mock getting groups for {}:{}", email, pageToken );
 
         if ( errorQueries.contains( email ) ) {
             LOG.trace( "Query error triggered" );
@@ -111,7 +113,7 @@ public class DirectoryApiMock implements DirectoryApi {
         final var groups = groupMap.get( email );
         if ( groups == null ) {
             if ( extraGroups.contains( email ) ) {
-                return new DirectoryApi.Result( Stream.empty(), null );
+                return new DirectoryApi.ListResult<>( Collections.emptyList(), null );
             } else {
                 throw new DirectoryApi.RequestFailedException( 404, "Unknown email" );
             }
@@ -126,58 +128,74 @@ public class DirectoryApiMock implements DirectoryApi {
         final var result = groups.subList( startIndex, endIndex );
         final var next = endIndex == groups.size() ? null : String.valueOf( page + 1 );
 
-        return new DirectoryApi.Result( result.stream(), next );
+        return new DirectoryApi.ListResult<>( result, next );
 
     }
 
     /**
-     * Checks if any global conditions need to be applied.
+     * Resolves a query.
+     *
+     * @param <R> The API result type.
+     * @param <Q> The API request type.
+     * @param request The query request.
+     * @param handler The function to use to execute the query.
+     * @throws DirectoryApi.RequestFailedException if the query failed.
      */
-    private void checkGlobalConditions() {
+    private <R extends DirectoryApi.Result, Q extends DirectoryApi.Request<R>> void query( 
+            final Q request,
+            final Function<Q, R> handler
+    ) {
 
         if ( throwError ) {
             LOG.trace( "Global error triggered" );
             throw new IllegalArgumentException( ERROR_MESSAGE_GLOBAL );
         }
 
+        request.callback().onSuccess( handler.apply( request ) );
+
     }
 
-    @Override
-    public Result getGroupsFor( final String email, final @Nullable String nextPageToken )
-            throws IOException, RequestFailedException {
+    /**
+     * Performs a request.
+     *
+     * @param request The request to perform.
+     */
+    @SuppressWarnings( "IllegalCatch" )
+    private void doRequest( final Request<?> request ) {
 
-        LOG.trace( "Mocking single {}:{}", email, nextPageToken );
+        try {
+            switch ( request ) {
+
+                case DirectoryApi.GroupMembershipRequest r: 
+                    query( r, this::queryGroupMembership );
+                    break;
+                    
+            }
+        } catch ( final DirectoryApi.RequestFailedException ex ) {
+            request.callback().onFailure( ex );
+        } catch ( final Exception ex ) {
+            request.callback().onError( ex );
+        }
+
+    }    
+
+    @Override
+    public void makeRequest( final Request<?> request ) {
+
+        LOG.trace( "Mocking single {}", request );
         counterSingle.incrementAndGet();
 
-        checkGlobalConditions();
-
-        return query( email, nextPageToken );
+        doRequest( request );
 
     }
 
     @Override
-    @SuppressWarnings( "IllegalCatch" )
-    public void getGroupsForBatch( final Collection<BatchRequest> requests )
-            throws IllegalArgumentException {
+    public void makeRequestBatch( final Collection<? extends Request<?>> requests ) {
 
         LOG.trace( "Mocking batch with {} elements", requests.size() );
         counterBatch.incrementAndGet();
 
-        checkGlobalConditions();
-
-        for ( final var request : requests ) {
-
-            LOG.trace( "Batch member {}", request );
-            
-            try {
-                request.callback().onSuccess( query( request.email(), request.nextPageToken() ) );
-            } catch ( final DirectoryApi.RequestFailedException ex ) {
-                request.callback().onFailure( ex );
-            } catch ( final Exception ex ) {
-                request.callback().onError( ex );
-            }
-
-        }
+        requests.forEach( this::doRequest );
 
     }
 

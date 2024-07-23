@@ -2,11 +2,16 @@ package dev.sympho.google_group_resolver.google;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.dataflow.qual.Pure;
+import org.checkerframework.dataflow.qual.SideEffectFree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +31,6 @@ import reactor.core.scheduler.Schedulers;
  * <p>This provider bridges the gap between the syncronous service from the Google API libraries,
  * and the reactive interface.
  */
-@SuppressWarnings( "IllegalCatch" ) // Need to catch Exception to prevent task leaks
 public class DirectoryServiceProvider implements DirectoryService {
 
     /** 
@@ -64,7 +68,7 @@ public class DirectoryServiceProvider implements DirectoryService {
     private final Duration batchTimeout;
 
     /** The sink used to issue tasks. */
-    private final Sinks.Many<Task> taskSink = Sinks.many()
+    private final Sinks.Many<Task<?>> taskSink = Sinks.many()
             .multicast()
             .onBackpressureBuffer( TASK_INITIAL_BUFFER_SIZE, false );
 
@@ -118,97 +122,11 @@ public class DirectoryServiceProvider implements DirectoryService {
     }
 
     /**
-     * Submits a task for handling.
-     *
-     * @param task The task to submit.
-     */
-    private void submitTask( final Task task ) {
-
-        // Needs to be done on a single-threaded scheduler
-        // since the sink needs serialized access
-        Mono.just( task )
-                .publishOn( taskSubmitScheduler )
-                .doOnNext( t -> LOG.trace( 
-                        "Submitting task for {}:{}", 
-                        t.email(), t.nextPageToken()
-                ) )
-                .map( this.taskSink::tryEmitNext )
-                // Error handling
-                .filter( result -> result != EmitResult.OK )
-                .map( result -> "Could not submit task: " + result )
-                .map( IllegalStateException::new )
-                .subscribe( task.emitter::error );
-
-    }
-
-    /**
-     * Handles a request result.
-     *
-     * @param request The originating request.
-     * @param result The received result.
-     */
-    private void handleResult( final Task request, final DirectoryApi.Result result ) {
-
-        LOG.trace( "Successful result for {}:{}", request.email(), request.nextPageToken() );
-
-        if ( request.emitter().isCancelled() ) {
-            LOG.trace( "Request was cancelled" );
-            return; // Don't need to continue if request was cancelled
-        }
-
-        result.groups()
-                .map( group -> new DirectoryGroup( group.name(), group.email() ) )
-                .forEach( request.emitter()::next );
-
-        final var nextToken = result.nextPageToken();
-        if ( nextToken == null ) {
-            // No more pages, complete the result flux
-            request.emitter().complete();
-        } else if ( !request.emitter().isCancelled() ) { // Check again just in case
-            // Issue task for the next page
-            submitTask( new Task( request.email(), request.emitter(), nextToken ) );
-        }
-
-    }
-
-    /**
-     * Handles a request failure.
-     *
-     * @param request The originating request.
-     * @param error The received error.
-     */
-    private void handleFailure( 
-            final Task request, 
-            final DirectoryApi.RequestFailedException error 
-    ) {
-
-        LOG.trace( "Failure result for {}:{}", request.email(), request.nextPageToken() );
-
-        request.emitter().error( new FailedException( error ) );
-
-    }
-
-    /**
-     * Handles an unexpected error during a request.
-     *
-     * @param request The originating request.
-     * @param error The received error.
-     */
-    private void handleError( final Task request, final Exception error ) {
-
-        LOG.trace( "Error result for {}:{}: {}", request.email(), request.nextPageToken(), error );
-
-        final var message = ERROR_UNEXPECTED_EXCEPTION;
-        request.emitter().error( new IllegalStateException( message, error ) );
-
-    }
-
-    /**
      * Execute a batch of tasks.
      *
      * @param tasks The tasks to execute.
      */
-    private void doTasks( final List<Task> tasks ) {
+    private void doTasks( final List<Task<?>> tasks ) {
 
         if ( tasks.isEmpty() ) { // Sanity check
             LOG.warn( "Empty batch received" );
@@ -218,38 +136,19 @@ public class DirectoryServiceProvider implements DirectoryService {
         if ( tasks.size() == 1 ) {
             // Shortcut to direct call if there is only one
             final var task = tasks.get( 0 );
-            LOG.debug( "Issuing standalone request for {}:{}", task.email(), task.nextPageToken() );
-            try {
-                final var result = client.getGroupsFor( task.email(), task.nextPageToken() );
-                handleResult( task, result );
-            } catch ( final DirectoryApi.RequestFailedException ex ) {
-                handleFailure( task, ex );
-            } catch ( final Exception ex ) {
-                LOG.error( "Standalone request threw unexpected exception", ex );
-                handleError( task, ex );
-            }
-            LOG.trace( "Standalone request for {}:{} done", task.email(), task.nextPageToken() );
-            return;
+            LOG.debug( "Issuing standalone request for {}", task );
+            client.makeRequest( task.toRequest() );
+            LOG.trace( "Standalone request for {} done", task );
+        } else {
+            LOG.debug( "Issuing batch request for {} tasks", tasks.size() );
+            // Checker is just being weird
+            @SuppressWarnings( { "nullness:return", "signedness:return" } ) 
+            final var requests = tasks.stream()
+                    .map( t -> t.toRequest() )
+                    .toList();
+            client.makeRequestBatch( requests );
+            LOG.trace( "Batch request done ({})", tasks.size() );
         }
-
-        LOG.debug( "Issuing batch request for {} tasks", tasks.size() );
-
-        // Prepare batch requests
-        final var requests = tasks.stream().map( task -> new DirectoryApi.BatchRequest(
-                task.email(), 
-                task.nextPageToken(), 
-                new Callback( this, task )
-        ) ).toList();
-
-        try {
-            // Execute batch
-            client.getGroupsForBatch( requests );
-        } catch ( final Exception ex ) {
-            LOG.error( "Batch request threw unexpected exception", ex );
-            tasks.forEach( task -> handleError( task, ex ) );
-        }
-
-        LOG.trace( "Batch request done", tasks.size() );
 
     }
 
@@ -273,10 +172,7 @@ public class DirectoryServiceProvider implements DirectoryService {
                         // Drop oldest since it has a higher chance of being near a timeout anyway
                         BufferOverflowStrategy.DROP_OLDEST 
                     )
-                    .doOnNext( t -> LOG.trace(
-                            "Task for {}:{} received",
-                            t.email(), t.nextPageToken()
-                    ) )
+                    .doOnNext( t -> LOG.trace( "Task {} received", t ) )
                     .bufferTimeout( batchSize, batchTimeout )
                     .doOnNext( t -> LOG.trace(
                             "Issuing batch with {} tasks",
@@ -304,61 +200,186 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     }
 
+    /**
+     * Submits a task for handling.
+     *
+     * @param task The task to submit.
+     */
+    private void submitTask( final Task<?> task ) {
+
+        // Needs to be done on a single-threaded scheduler
+        // since the sink needs serialized access
+        Mono.just( task )
+                .publishOn( taskSubmitScheduler )
+                .doOnNext( t -> LOG.trace( "Submitting task {}", t ) )
+                .map( this.taskSink::tryEmitNext )
+                // Error handling
+                .filter( result -> result != EmitResult.OK )
+                .map( result -> "Could not submit task: " + result )
+                .map( IllegalStateException::new )
+                .subscribe( task.emitter()::error );
+
+    }
+
+    /**
+     * Submits a task for handling.
+     *
+     * @param <V> The type of task result values.
+     * @param taskFactory The factory to use to create a task from the sink.
+     * @return The task results.
+     */
+    private <V extends @NonNull Object> Flux<V> submitTask( 
+            final Function<FluxSink<V>, Task<V>> taskFactory
+    ) {
+
+        return Flux.<V>push( emitter -> submitTask( 
+                        taskFactory.apply( emitter ) 
+                ) )
+                .publishOn( responseScheduler )
+                .timeout( RESULT_TIMEOUT ); // Timeout in case somehow the task gets lost
+
+    }
+
     @Override
     public Flux<DirectoryGroup> getGroupsFor( final String email ) {
 
         // Submit group fetch as a task
-        return Flux.<DirectoryGroup>push( emitter -> submitTask( 
-                        new Task( email, emitter, null ) 
-                ) )
-                .publishOn( responseScheduler )
-                .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
+        return this.<DirectoryGroup>submitTask( 
+                        emitter -> new GroupMembershipTask( this, email, emitter, null ) 
+                )
                 .checkpoint( "Get groups" );
+
+    }
+
+    /**
+     * A task to be executed.
+     *
+     * @param <V> The type of task result values.
+     */
+    private interface Task<V extends @NonNull Object> 
+            extends DirectoryApi.Callback<DirectoryApi.ListResult<V>> {
+
+        /**
+         * Converts the task to an API request.
+         *
+         * @return The request.
+         */
+        @SideEffectFree
+        DirectoryApi.Request<DirectoryApi.ListResult<V>> toRequest();
+
+        /**
+         * The provider that is running the task.
+         *
+         * @return The provider.
+         */
+        @Pure
+        DirectoryServiceProvider provider();
+
+        /**
+         * The emitter to use to issue results.
+         *
+         * @return The emitter.
+         */
+        @Pure
+        FluxSink<V> emitter();
+
+        /**
+         * The token of the result page to fetch.
+         *
+         * @return The page token.
+         */
+        @Pure
+        @Nullable String pageToken();
+
+        /**
+         * Creates a copy of this task with a new page token.
+         *
+         * @param nextPageToken The page token to insert.
+         * @return The new task.
+         */
+        @SideEffectFree 
+        Task<V> page( String nextPageToken );
+
+        @Override
+        default void onSuccess( final DirectoryApi.ListResult<V> result ) {
+
+            LOG.trace( "Successful result for {}", this );
+
+            if ( emitter().isCancelled() ) {
+                LOG.trace( "Request was cancelled" );
+                return; // Don't need to continue if request was cancelled
+            }
+
+            result.values().forEach( emitter()::next );
+
+            final var nextToken = result.nextPageToken();
+            if ( nextToken == null ) {
+                // No more pages, complete the result flux
+                emitter().complete();
+            } else if ( !emitter().isCancelled() ) { // Check again just in case
+                // Issue task for the next page
+                provider().submitTask( page( nextToken ) );
+            }
+            
+        }
+
+        @Override
+        default void onFailure( final DirectoryApi.RequestFailedException error ) {
+
+            LOG.trace( "Failure result for {}", this );
+
+            emitter().error( new FailedException( error ) );
+
+        }
+
+        @Override
+        default void onError( final Exception error ) {
+
+            LOG.trace( "Error result for {}: {}", this, error );
+
+            final var message = ERROR_UNEXPECTED_EXCEPTION;
+            emitter().error( new IllegalStateException( message, error ) );
+
+        }
 
     }
 
     /**
      * A group membership fetch task.
      *
+     * @param provider The provider that is running the task.
      * @param email The user/group email.
      * @param emitter The emitter to send results to.
-     * @param nextPageToken The token to use for fetching the next page of results, if any.
+     * @param pageToken The token to use for fetching the next page of results, if any.
      */
-    private record Task(
+    private record GroupMembershipTask(
+            DirectoryServiceProvider provider,
             String email,
             FluxSink<DirectoryGroup> emitter,
-            @Nullable String nextPageToken
-    ) {}
-
-    /**
-     * A callback for a request within a batch request.
-     *
-     * @param provider The underlying provider.
-     * @param task The task that originated the request.
-     */
-    private record Callback(
-            DirectoryServiceProvider provider,
-            Task task
-    ) implements DirectoryApi.Callback {
+            @Nullable String pageToken
+    ) implements Task<DirectoryGroup> {
 
         @Override
-        public void onSuccess( final DirectoryApi.Result result ) {
+        public DirectoryApi.Request<DirectoryApi.ListResult<DirectoryGroup>> toRequest() {
 
-            provider.handleResult( task, result );
-            
-        }
-
-        @Override
-        public void onFailure( final DirectoryApi.RequestFailedException error ) {
-
-            provider.handleFailure( task, error );
+            return new DirectoryApi.GroupMembershipRequest( email, pageToken, this );
 
         }
 
         @Override
-        public void onError( final Exception error ) {
+        public Task<DirectoryGroup> page( final String nextPageToken ) {
 
-            provider.handleError( task, error );
+            return new GroupMembershipTask( provider, email, emitter, nextPageToken );
+
+        }
+
+        @Override
+        public String toString() {
+
+            return "GroupMembershipTask[email=%s, pageToken=%s]".formatted( 
+                    email, 
+                    Objects.requireNonNullElse( pageToken, "null" ) 
+            );
 
         }
 
