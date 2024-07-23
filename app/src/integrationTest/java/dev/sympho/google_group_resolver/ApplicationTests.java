@@ -137,8 +137,9 @@ class ApplicationTests {
                             false, 
                             1000, 
                             Duration.ofMinutes( 1 ), 
-                            Duration.ofDays( 30 ), 
-                            Duration.ofMinutes( 1 )
+                            Duration.ofDays( 2 ), 
+                            Duration.ofMinutes( 1 ),
+                            new Config.CacheSeederSettings( false, Duration.ZERO )
                     ), 
                     true,
                     new Config.ClientSettings(

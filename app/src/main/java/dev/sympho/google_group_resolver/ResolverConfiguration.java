@@ -127,6 +127,22 @@ public class ResolverConfiguration {
     }
 
     /**
+     * Creates the cache seeder.
+     *
+     * @param directory The directory service.
+     * @param cache The group cache.
+     * @return The seeder.
+     */
+    @Bean
+    CacheSeeder seeder( final DirectoryService directory, final GroupCache cache ) {
+
+        final var settings = config.cache().seeder();
+        final var enabled = settings.enabled() && !config.cache().disable();
+        return new CacheSeeder( directory, cache, settings.period(), enabled );
+
+    }
+
+    /**
      * Creates the resolver.
      *
      * @param cache The group cache.

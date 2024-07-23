@@ -34,13 +34,26 @@ public record Config(
      * @param ttlValid How long entries should remain valid before becoming stale.
      * @param ttlStale How long entries should remain stale before becoming expired.
      * @param cleanerPeriod Period between runs of the cleaner job.
+     * @param seeder The seeder configuration.
      */
     public record CacheSettings(
             @DefaultValue( "false" ) boolean disable,
             @DefaultValue( "1000" ) int capacity,
             @DefaultValue( "1m" ) Duration ttlValid,
-            @DefaultValue( "30d" ) Duration ttlStale,
-            @DefaultValue( "1m" ) Duration cleanerPeriod
+            @DefaultValue( "2d" ) Duration ttlStale,
+            @DefaultValue( "1m" ) Duration cleanerPeriod,
+            @Valid @DefaultValue CacheSeederSettings seeder
+    ) {}
+
+    /**
+     * Seeder settings.
+     *
+     * @param enabled Whether to enable the seeder.
+     * @param period The period for re-seeding. Set to 0 to disable.
+     */
+    public record CacheSeederSettings(
+            @DefaultValue( "true" ) boolean enabled,
+            @DefaultValue( "1d" ) Duration period
     ) {}
 
     /**
