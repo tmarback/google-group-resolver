@@ -61,9 +61,9 @@ jobs:
             # branch name, except main, which gets the edge label
             type=ref,event=branch,enable=${{ github.ref != format('refs/heads/{0}', 'main') }}
             # full version
-            #type=semver,pattern={{version}}
+            type=semver,pattern={{version}}
             # minor version
-            #type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}
             # major version
             #type=semver,pattern={{major}}
       - name: Set up Docker Buildx
