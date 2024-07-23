@@ -80,7 +80,7 @@ public interface DirectoryApi {
      *
      * @param <R> The result type.
      */
-    sealed interface Request<R extends Result> permits GroupMembershipRequest {
+    sealed interface Request<R extends Result> permits GroupMembershipRequest, GroupListRequest {
 
         /**
          * The callback to invoke to handle the result of the request.
@@ -113,6 +113,31 @@ public interface DirectoryApi {
 
             return "GroupMembershipRequest[email=%s, nextPageToken=%s]".formatted( 
                     email, 
+                    Objects.requireNonNullElse( nextPageToken, "null" )
+            );
+
+        }
+
+    }
+
+    /**
+     * A request to fetch the groups that are part of the directory.
+     *
+     * @param nextPageToken The token for the next page received by a previous request, or
+     *                      {@code null} if this is the first request.
+     * @param callback The callback to invoke for handling the result.
+     * @see DirectoryApi#makeRequest(Request)
+     * @see DirectoryApi#makeRequestBatch(Collection)
+     */
+    record GroupListRequest(
+            @Nullable String nextPageToken,
+            Callback<ListResult<DirectoryGroup>> callback
+    ) implements Request<ListResult<DirectoryGroup>> {
+
+        @Override
+        public String toString() {
+
+            return "GroupListRequest[nextPageToken=%s]".formatted( 
                     Objects.requireNonNullElse( nextPageToken, "null" )
             );
 

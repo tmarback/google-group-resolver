@@ -247,7 +247,18 @@ public class DirectoryServiceProvider implements DirectoryService {
         return this.<DirectoryGroup>submitTask( 
                         emitter -> new GroupMembershipTask( this, email, emitter, null ) 
                 )
-                .checkpoint( "Get groups" );
+                .checkpoint( "Get group memberships" );
+
+    }
+
+    @Override
+    public Flux<DirectoryGroup> getGroups() {
+
+        // Submit group fetch as a task
+        return this.<DirectoryGroup>submitTask( 
+                        emitter -> new GroupListTask( this, emitter, null ) 
+                )
+                .checkpoint( "Get group list" );
 
     }
 
@@ -378,6 +389,44 @@ public class DirectoryServiceProvider implements DirectoryService {
 
             return "GroupMembershipTask[email=%s, pageToken=%s]".formatted( 
                     email, 
+                    Objects.requireNonNullElse( pageToken, "null" ) 
+            );
+
+        }
+
+    }
+
+    /**
+     * A group list fetch task.
+     *
+     * @param provider The provider that is running the task.
+     * @param emitter The emitter to send results to.
+     * @param pageToken The token to use for fetching the next page of results, if any.
+     */
+    private record GroupListTask(
+            DirectoryServiceProvider provider,
+            FluxSink<DirectoryGroup> emitter,
+            @Nullable String pageToken
+    ) implements Task<DirectoryGroup> {
+
+        @Override
+        public DirectoryApi.Request<DirectoryApi.ListResult<DirectoryGroup>> toRequest() {
+
+            return new DirectoryApi.GroupListRequest( pageToken, this );
+
+        }
+
+        @Override
+        public Task<DirectoryGroup> page( final String nextPageToken ) {
+
+            return new GroupListTask( provider, emitter, nextPageToken );
+
+        }
+
+        @Override
+        public String toString() {
+
+            return "GroupListTask[pageToken=%s]".formatted( 
                     Objects.requireNonNullElse( pageToken, "null" ) 
             );
 

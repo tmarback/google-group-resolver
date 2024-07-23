@@ -26,7 +26,7 @@ public final class DirectoryApiFixture {
     );
     
     /** Group hierarchy for testing. */
-    public static final List<Map.Entry<String, List<DirectoryGroup>>> GROUP_LIST = List.of(
+    public static final List<Map.Entry<String, List<DirectoryGroup>>> GROUP_MAPPINGS = List.of(
             Map.entry( "foo@org.com", List.of(
                 new DirectoryGroup( "Group A", "group-A@org.com" ),
                 new DirectoryGroup( "Group B", "group-B@org.com" ),
@@ -77,10 +77,24 @@ public final class DirectoryApiFixture {
     static {
 
         final var map = LinkedHashMap.<String, List<DirectoryGroup>>newLinkedHashMap( 
-                GROUP_LIST.size() 
+                GROUP_MAPPINGS.size() 
         );
-        GROUP_LIST.forEach( e -> map.put( e.getKey(), e.getValue() ) );
+        GROUP_MAPPINGS.forEach( e -> map.put( e.getKey(), e.getValue() ) );
         GROUP_MAP = Collections.unmodifiableSequencedMap( map );
+
+    }
+
+    /** List of groups. */
+    public static final List<DirectoryGroup> GROUP_LIST;
+    
+    static {
+        
+        final var seen = new HashSet<String>();
+        GROUP_LIST = GROUP_MAPPINGS.stream()
+                .map( Map.Entry::getValue )
+                .flatMap( l -> l.stream() )
+                .filter( g -> seen.add( g.email() ) )
+                .toList();
 
     }
 
@@ -93,12 +107,12 @@ public final class DirectoryApiFixture {
     static {
 
         final var map = LinkedHashMap.<String, List<DirectoryGroup>>newLinkedHashMap( 
-                GROUP_LIST.size() 
+                GROUP_MAPPINGS.size() 
         );
         final var depth = LinkedHashMap.<String, Integer>newLinkedHashMap( 
-                GROUP_LIST.size() 
+                GROUP_MAPPINGS.size() 
         );
-        GROUP_LIST.forEach( entry -> {
+        GROUP_MAPPINGS.forEach( entry -> {
 
             final var email = entry.getKey();
             

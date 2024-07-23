@@ -98,7 +98,7 @@ public class DirectoryServiceProviderTest {
          */
         private static Stream<String> testSingleOneNoPages() {
 
-            return DirectoryApiFixture.GROUP_LIST.stream()
+            return DirectoryApiFixture.GROUP_MAPPINGS.stream()
                     .filter( e -> e.getValue().size() <= DirectoryApiMock.PAGE_SIZE )
                     .map( Map.Entry::getKey );
 
@@ -145,7 +145,7 @@ public class DirectoryServiceProviderTest {
          */
         private static Stream<String> testSingleOneWithPages() {
 
-            return DirectoryApiFixture.GROUP_LIST.stream()
+            return DirectoryApiFixture.GROUP_MAPPINGS.stream()
                     .filter( e -> e.getValue().size() > DirectoryApiMock.PAGE_SIZE )
                     .map( Map.Entry::getKey );
 
@@ -194,13 +194,13 @@ public class DirectoryServiceProviderTest {
 
             final var verifier = StepVerifier.withVirtualTime( () -> {
 
-                return Flux.fromIterable( DirectoryApiFixture.GROUP_LIST )
+                return Flux.fromIterable( DirectoryApiFixture.GROUP_MAPPINGS )
                         .map( Map.Entry::getKey )
                         .concatMap( email -> iut.getGroupsFor( email ).collectList() );
 
             }, () -> scheduler, Long.MAX_VALUE ).expectSubscription();
 
-            for ( final var entry : DirectoryApiFixture.GROUP_LIST ) {
+            for ( final var entry : DirectoryApiFixture.GROUP_MAPPINGS ) {
 
                 final var expected = entry.getValue().stream()
                         .map( g -> new DirectoryGroup( g.name(), g.email() ) )
@@ -217,7 +217,7 @@ public class DirectoryServiceProviderTest {
 
             verifier.thenAwait( Duration.ofDays( 1 ) ).verifyComplete();
 
-            final var totalPages = DirectoryApiFixture.GROUP_LIST.stream()
+            final var totalPages = DirectoryApiFixture.GROUP_MAPPINGS.stream()
                     .map( Map.Entry::getValue )
                     .mapToInt( List::size )
                     .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
@@ -237,7 +237,7 @@ public class DirectoryServiceProviderTest {
 
             // Since everything starts on the same batch, it will take as many batches as needed
             // to get all the pages of the largest result
-            final var batches = DirectoryApiFixture.GROUP_LIST.stream()
+            final var batches = DirectoryApiFixture.GROUP_MAPPINGS.stream()
                     .map( Map.Entry::getValue )
                     .mapToInt( List::size )
                     .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
@@ -290,11 +290,11 @@ public class DirectoryServiceProviderTest {
 
             final var batchSize = 2;
 
-            final var batches = IntStream.range( 0, DirectoryApiFixture.GROUP_LIST.size() )
+            final var batches = IntStream.range( 0, DirectoryApiFixture.GROUP_MAPPINGS.size() )
                     .map( i -> {
 
                         final var batch = i / batchSize;
-                        final var entry = DirectoryApiFixture.GROUP_LIST.get( i );
+                        final var entry = DirectoryApiFixture.GROUP_MAPPINGS.get( i );
                         final var groups = entry.getValue().size();
                         final var pages = Math.ceilDiv( groups, DirectoryApiMock.PAGE_SIZE );
                         return pages + batch;
@@ -305,7 +305,7 @@ public class DirectoryServiceProviderTest {
 
             StepVerifier.withVirtualTime( () -> {
 
-                return Flux.fromIterable( DirectoryApiFixture.GROUP_LIST )
+                return Flux.fromIterable( DirectoryApiFixture.GROUP_MAPPINGS )
                         .map( Map.Entry::getKey )
                         .buffer( batchSize )
                         .delayElements( BATCH_TIMEOUT )
@@ -649,7 +649,7 @@ public class DirectoryServiceProviderTest {
 
             // Since everything starts on the same batch, it will take as many batches as needed
             // to get all the pages of the largest result
-            final var batches = DirectoryApiFixture.GROUP_LIST.stream()
+            final var batches = DirectoryApiFixture.GROUP_MAPPINGS.stream()
                     .map( Map.Entry::getValue )
                     .mapToInt( List::size )
                     .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
@@ -680,6 +680,79 @@ public class DirectoryServiceProviderTest {
             assertThat( apiClient.batchCount() ).isGreaterThan( 0 );
         
         }
+
+    }
+
+    /**
+     * Tests listing all groups.
+     */
+    @Test
+    public void testGroupList() {
+
+        final var pages = Math.ceilDiv( 
+                DirectoryApiFixture.GROUP_LIST.size(), 
+                DirectoryApiMock.PAGE_SIZE 
+        );
+        
+        StepVerifier.withVirtualTime( 
+                        () -> iut.getGroups().collectList(), 
+                        () -> scheduler,
+                        Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
+                .assertNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) 
+                )
+                .verifyComplete();
+
+        // Check that the expected calls were made
+        assertThat( apiClient.singleCount() ).isEqualTo( pages );
+        assertThat( apiClient.batchCount() ).isEqualTo( 0 );
+
+    }
+
+    /**
+     * Tests batches containing different request types.
+     */
+    @Test
+    public void testMixedBatch() {
+
+        final var email = "foo@org.com";
+        final var expected = DirectoryApiFixture.GROUP_MAP.get( email );
+        final var pages = Math.ceilDiv( expected.size(), DirectoryApiMock.PAGE_SIZE );
+
+        final var listPages = Math.ceilDiv( 
+                DirectoryApiFixture.GROUP_LIST.size(), 
+                DirectoryApiMock.PAGE_SIZE 
+        );
+
+        assertThat( listPages ).isGreaterThan( pages );
+
+        final var batches = pages;
+        final var singles = listPages - pages;
+        
+        StepVerifier.withVirtualTime( 
+                        () -> iut.getGroups().collectList().mergeWith(
+                                iut.getGroupsFor( email ).collectList()
+                        ), 
+                        () -> scheduler,
+                        Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
+                .assertNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( expected ) 
+                )
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( singles ) )
+                .assertNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) 
+                )
+                .verifyComplete();
+
+        // Check that the expected calls were made
+        assertThat( apiClient.singleCount() ).isEqualTo( singles );
+        assertThat( apiClient.batchCount() ).isEqualTo( batches );
 
     }
     

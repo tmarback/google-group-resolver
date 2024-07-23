@@ -16,6 +16,13 @@ public interface DirectoryService {
     Flux<DirectoryGroup> getGroupsFor( String email );
 
     /**
+     * Retrieve all groups in the directory.
+     *
+     * @return The groups.
+     */
+    Flux<DirectoryGroup> getGroups();
+
+    /**
      * Error indicating that an operation failed.
      */
     class FailedException extends RuntimeException {

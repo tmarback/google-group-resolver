@@ -2,6 +2,7 @@ package dev.sympho.google_group_resolver.google;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,9 @@ public class DirectoryApiMock implements DirectoryApi {
     /** Groups that some entity maps to but don't have their own mappings. */
     private final Set<String> extraGroups;
 
+    /** All groups for which there is data. */
+    private final List<DirectoryGroup> groupList;
+
     /** Queries to throw errors for. */
     private final List<String> errorQueries;
 
@@ -75,6 +79,13 @@ public class DirectoryApiMock implements DirectoryApi {
                 .map( DirectoryGroup::email )
                 .filter( email -> !this.groupMap.containsKey( email ) )
                 .collect( Collectors.toSet() );
+
+        // Compute total group list
+        final Set<String> seen = new HashSet<>();
+        this.groupList = groupMap.values().stream()
+                .flatMap( l -> l.stream() )
+                .filter( g -> seen.add( g.email() ) )
+                .toList();
 
     }
 
@@ -133,6 +144,36 @@ public class DirectoryApiMock implements DirectoryApi {
     }
 
     /**
+     * Resolves a group list query.
+     *
+     * @param request The query request.
+     * @return The query result.
+     * @throws DirectoryApi.RequestFailedException if the query failed.
+     */
+    private DirectoryApi.ListResult<DirectoryGroup> queryGroupList( 
+            final DirectoryApi.GroupListRequest request 
+    ) throws DirectoryApi.RequestFailedException {
+
+        final @Nullable String pageToken = request.nextPageToken();
+
+        LOG.trace( "Mock list groups {}", pageToken );
+
+        final var groups = groupList;
+
+        // Calculate page bounds
+        final var page = pageToken == null ? 0 : Integer.parseInt( pageToken );
+        final var startIndex = page * PAGE_SIZE;
+        final var endIndex = Math.min( ( page + 1 ) * PAGE_SIZE, groups.size() );
+
+        // Get page content
+        final var result = groups.subList( startIndex, endIndex );
+        final var next = endIndex == groups.size() ? null : String.valueOf( page + 1 );
+
+        return new DirectoryApi.ListResult<>( result, next );
+
+    }
+
+    /**
      * Resolves a query.
      *
      * @param <R> The API result type.
@@ -168,6 +209,10 @@ public class DirectoryApiMock implements DirectoryApi {
 
                 case DirectoryApi.GroupMembershipRequest r: 
                     query( r, this::queryGroupMembership );
+                    break;
+
+                case DirectoryApi.GroupListRequest r:
+                    query( r, this::queryGroupList );
                     break;
                     
             }

@@ -52,6 +52,7 @@ public class DirectoryApiClient implements DirectoryApi {
         return switch ( source ) {
 
             case GroupMembershipRequest r -> new GroupMembershipApiRequest( r );
+            case GroupListRequest r -> new GroupListApiRequest( r );
 
         };
 
@@ -252,6 +253,54 @@ public class DirectoryApiClient implements DirectoryApi {
 
             var request = directory.groups().list()
                     .setUserKey( sourceRequest.email() );
+            
+            final var token = sourceRequest.nextPageToken();
+            if ( token != null ) {
+                request = request.setPageToken( token );
+            }
+
+            return request;
+
+        }
+
+        @Override
+        public ListResult<DirectoryGroup> parseResult( final Groups raw ) {
+
+            final var groups = raw.getGroups() == null
+                    ? Stream.<DirectoryGroup>empty()
+                    : raw.getGroups().stream()
+                            .map( group -> new DirectoryGroup( 
+                                    group.getName(), 
+                                    group.getEmail() 
+                            ) );
+
+            final var nextToken = raw.getNextPageToken();
+            
+            return new ListResult<>( groups.toList(), nextToken );
+
+        }
+
+    }
+
+    /**
+     * API request for {@link GroupListRequest}.
+     *
+     * @param sourceRequest The underlying interface request.
+     */
+    private record GroupListApiRequest(
+            GroupListRequest sourceRequest
+    ) implements ApiRequest<ListResult<DirectoryGroup>, Groups, Directory.Groups.List> {
+
+        @Override
+        public Class<Groups> dataClass() {
+            return Groups.class;
+        }
+
+        @Override
+        public List createRequest( final Directory directory ) throws IOException {
+
+            var request = directory.groups().list()
+                    .setCustomer( "my_customer" );
             
             final var token = sourceRequest.nextPageToken();
             if ( token != null ) {
