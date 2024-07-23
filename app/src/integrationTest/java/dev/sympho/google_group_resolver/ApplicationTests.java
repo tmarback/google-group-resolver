@@ -2,7 +2,6 @@ package dev.sympho.google_group_resolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.stream.Stream;
 
@@ -21,12 +20,14 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import dev.sympho.google_group_resolver.google.DirectoryApi;
 import dev.sympho.google_group_resolver.google.DirectoryApiFixture;
+import dev.sympho.google_group_resolver.google.ServiceConfiguration;
+import dev.sympho.google_group_resolver.google.ServiceSettings;
 
 /**
  * Tests for the application.
  */
 @WebFluxTest
-@Import( ResolverConfiguration.class )
+@Import( { ResolverConfiguration.class, ServiceConfiguration.class } )
 @DirtiesContext // Cache state is shared so need to restart between tests
 @Execution( ExecutionMode.SAME_THREAD ) // Needed because of @DirtiesContext
 class ApplicationTests {
@@ -125,31 +126,47 @@ class ApplicationTests {
         }
 
         /**
-         * Creates the config.
+         * Creates the resolver settings.
          *
-         * @return The config.
+         * @return The settings.
          */
         @Bean 
-        Config config() {
+        ResolverSettings resolverSettings() {
 
-            return new Config(
-                    new Config.CacheSettings(
-                            false, 
-                            1000, 
-                            Duration.ofMinutes( 1 ), 
-                            Duration.ofDays( 2 ), 
-                            Duration.ofMinutes( 1 ),
-                            new Config.CacheSeederSettings( false, Duration.ZERO )
-                    ), 
-                    true,
-                    new Config.ClientSettings(
-                            1000, 
-                            Duration.ofMillis( 1 ), 
-                            new Config.ClientCredentials(
-                                    "admin@test.com", 
-                                    Path.of( "." )
-                            )
-                    )
+            return new ResolverSettings( true );
+
+        }
+
+        /**
+         * Creates the cache settings.
+         *
+         * @return The settings.
+         */
+        @Bean
+        CacheSettings cacheSettings() {
+
+            return new CacheSettings(
+                    false, 
+                    1000, 
+                    Duration.ofMinutes( 1 ), 
+                    Duration.ofDays( 2 ), 
+                    Duration.ofMinutes( 1 ),
+                    new CacheSettings.Seeder( false, Duration.ZERO )
+            );
+
+        }
+
+        /**
+         * Creates the client settings.
+         *
+         * @return The settings.
+         */
+        @Bean
+        ServiceSettings clientSettings() {
+
+            return new ServiceSettings(
+                    1000, 
+                    Duration.ofMillis( 1 )
             );
 
         }

@@ -37,9 +37,6 @@ public class CacheSeeder {
     /** The retry policy on pipeline error. */
     private final Retry retry;
 
-    /** If {@code false}, does not do anything. */
-    private final boolean enabled;
-
     /** The active runner. */
     private @Nullable Disposable runner;
 
@@ -50,24 +47,17 @@ public class CacheSeeder {
      * @param cache The cache to seed.
      * @param period If a positive duration, the seeding is repeated regularly with the given
      *               period, else it only runs once at the start.
-     * @param enabled If {@code false}, becomes a no-op.
      */
     public CacheSeeder( 
             final DirectoryService directory, 
             final GroupCache cache, 
-            final Duration period,
-            final boolean enabled
+            final Duration period
     ) {
 
         this.directory = directory;
         this.cache = cache;
         this.period = period;
         this.retry = RetrySpec.fixedDelay( Long.MAX_VALUE, period ).transientErrors( true );
-        this.enabled = enabled;
-
-        if ( enabled ) {
-            LOG.debug( "Cache seeder has period {}", period );
-        }
 
     }
 
@@ -95,10 +85,6 @@ public class CacheSeeder {
      */
     @PostConstruct
     public synchronized void start() {
-
-        if ( !enabled ) {
-            return; // Don't start if it's not enabled
-        }
 
         if ( !period.isPositive() ) {
 
