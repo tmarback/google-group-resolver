@@ -48,7 +48,9 @@ jobs:
           build-scan-terms-of-use-agree: "yes"
 
       - name: Build
-        run: ./gradlew build -Pchecker=true -Pstrict=true
+        run: |
+            VERSION="${{ github.ref == 'refs/heads/main' && 'edge' || github.ref_name }}"
+            ./gradlew build -Pchecker=true -Pstrict=true -Pversion=${VERSION#${{ startsWith(github.ref, 'refs/heads/support/v') && 'support/' || '' }}v}
 
       - name: Docker meta
         id: meta

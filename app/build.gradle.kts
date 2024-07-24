@@ -3,9 +3,6 @@ plugins {
     alias(libs.plugins.springboot)
 }
 
-group = "dev.sympho"
-version = "0.2.0-SNAPSHOT"
-
 dependencies {
     // Regular dependencies
     implementation(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES))
