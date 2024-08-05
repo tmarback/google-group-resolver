@@ -32,7 +32,7 @@ jobs:
           submodules: 'recursive'
 
       - name: Verify Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v3
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Set up Java and Maven
         uses: actions/setup-java@v4
@@ -41,7 +41,7 @@ jobs:
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
         with:
           build-scan-publish: true
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
@@ -87,7 +87,7 @@ jobs:
           push: true
 
       - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@v3
+        uses: gradle/actions/dependency-submission@v4
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
