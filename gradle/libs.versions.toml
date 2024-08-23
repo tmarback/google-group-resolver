@@ -8,5 +8,5 @@ bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = 
 osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 
 [plugins]
-springboot = { id = "org.springframework.boot", version = "3.3.2" }
+springboot = { id = "org.springframework.boot", version = "3.3.3" }
 tasktree = { id = "com.dorongold.task-tree", version = "4.0.0" }
