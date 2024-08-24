@@ -15,6 +15,8 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.Disposable;
 import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.Flux;
@@ -98,6 +100,8 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private final Scheduler taskProcessScheduler = Schedulers.parallel();
 
+    private final Counter droppedTasks;
+
     /** The running task handler. */
     private @Nullable Disposable running;
 
@@ -112,12 +116,15 @@ public class DirectoryServiceProvider implements DirectoryService {
     public DirectoryServiceProvider( 
             final DirectoryApi client,
             final int batchSize,
-            final Duration batchTimeout
+            final Duration batchTimeout,
+            final MeterRegistry meters
     ) {
 
         this.client = client;
         this.batchSize = batchSize;
         this.batchTimeout = batchTimeout;
+
+        this.droppedTasks = meters.counter( "" );
 
     }
 
@@ -164,10 +171,13 @@ public class DirectoryServiceProvider implements DirectoryService {
                     .publishOn( taskProcessScheduler )
                     .onBackpressureBuffer( 
                         TASK_BUFFER_SIZE, 
-                        // Signal error on any dropped tasks
-                        task -> task.emitter().error( new IllegalStateException(
-                            "Directory API task buffer overflow"
-                        ) ), 
+                        task -> {
+                            droppedTasks.increment();
+                            // Signal error on any dropped tasks
+                            task.emitter().error( new IllegalStateException(
+                                "Directory API task buffer overflow"
+                            ) );
+                        }, 
                         // Don't kill the stream on backpressure issues
                         // Drop oldest since it has a higher chance of being near a timeout anyway
                         BufferOverflowStrategy.DROP_OLDEST 
