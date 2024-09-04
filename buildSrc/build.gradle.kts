@@ -8,5 +8,5 @@ repositories {
 }
 
 dependencies {
-    implementation("org.checkerframework:checkerframework-gradle-plugin:0.6.43")
+    implementation("org.checkerframework:checkerframework-gradle-plugin:0.6.44")
 }
