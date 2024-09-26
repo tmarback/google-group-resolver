@@ -1,6 +1,6 @@
 [libraries]
 google-oauth-client = { module = "com.google.oauth-client:google-oauth-client-jetty", version = "1.36.0" }
-google-api-directory = { module = "com.google.apis:google-api-services-admin-directory", version = "directory_v1-rev20240709-2.0.0" }
+google-api-directory = { module = "com.google.apis:google-api-services-admin-directory", version = "directory_v1-rev20240924-2.0.0" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
 # For getting rid of annotation warnings
 spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
