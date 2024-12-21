@@ -23,30 +23,19 @@ public class ResolverConfiguration {
      * @return The group cache.
      */
     @Bean
-    @ConditionalOnProperty( prefix = CacheSettings.PREFIX, name = "enabled", matchIfMissing = true )
-    LRUGroupCache cache( final DirectoryService directory, final CacheSettings config ) {
+    GroupCache cache( final DirectoryService directory, final CacheSettings config ) {
 
-        return new LRUGroupCache( 
-                directory, 
-                config.ttlValid(), 
-                config.ttlStale(), 
-                config.cleanerPeriod(), 
-                config.capacity()
-        );
-
-    }
-
-    /**
-     * Creates a passthrough group cache.
-     *
-     * @param directory The directory service.
-     * @return The group cache.
-     */
-    @Bean
-    @ConditionalOnProperty( prefix = CacheSettings.PREFIX, name = "enabled", havingValue = "false" )
-    PassthroughGroupCache passthruCache( final DirectoryService directory ) {
-
-        return new PassthroughGroupCache( directory );
+        if ( config.enabled() ) {
+            return new LRUGroupCache( 
+                    directory, 
+                    config.ttlValid(), 
+                    config.ttlStale(), 
+                    config.cleanerPeriod(), 
+                    config.capacity()
+            );
+        } else {
+            return new PassthroughGroupCache( directory );
+        }
 
     }
 
