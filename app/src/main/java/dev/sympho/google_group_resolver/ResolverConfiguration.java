@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import dev.sympho.google_group_resolver.google.DirectoryService;
+import dev.sympho.google_group_resolver.google.ServiceSettings;
 
 /**
  * Configuration for the group resolver.
@@ -13,6 +14,28 @@ public class ResolverConfiguration {
 
     /** Creates a new instance. */
     public ResolverConfiguration() {}
+
+    /**
+     * Extracts the directory service settings.
+     *
+     * @param config The resolver settings
+     * @return The directory service settings.
+     */
+    @Bean
+    ServiceSettings directorySettings( final ResolverSettings config ) {
+        return config.directory();
+    }
+
+    /**
+     * Extracts the cache settings.
+     *
+     * @param config The resolver settings
+     * @return The cache settings.
+     */
+    @Bean
+    CacheSettings cacheSettings( final ResolverSettings config ) {
+        return config.cache();
+    }
 
     /**
      * Creates the group cache.

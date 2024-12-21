@@ -4,7 +4,6 @@ import java.time.Duration;
 
 import jakarta.validation.Valid;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
@@ -17,7 +16,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param cleanerPeriod Period between runs of the cleaner job.
  * @param seeder The seeder configuration.
  */
-@ConfigurationProperties( CacheSettings.PREFIX )
 public record CacheSettings(
         @DefaultValue( "true" ) boolean enabled,
         @DefaultValue( "1000" ) int capacity,
@@ -26,9 +24,6 @@ public record CacheSettings(
         @DefaultValue( "1m" ) Duration cleanerPeriod,
         @Valid @DefaultValue SeederSettings seeder
 ) {
-
-    /** The prefix for all settings. */
-    public static final String PREFIX = ResolverSettings.PREFIX + ".cache";
 
     /**
      * Seeder settings.

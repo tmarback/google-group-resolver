@@ -126,14 +126,16 @@ class ApplicationTests {
         }
 
         /**
-         * Creates the resolver settings.
+         * Creates the client settings.
          *
          * @return The settings.
          */
-        @Bean 
-        ResolverSettings resolverSettings() {
+        ServiceSettings clientSettings() {
 
-            return new ResolverSettings( true );
+            return new ServiceSettings(
+                    1000, 
+                    Duration.ofMillis( 1 )
+            );
 
         }
 
@@ -142,7 +144,6 @@ class ApplicationTests {
          *
          * @return The settings.
          */
-        @Bean
         CacheSettings cacheSettings() {
 
             return new CacheSettings(
@@ -157,17 +158,14 @@ class ApplicationTests {
         }
 
         /**
-         * Creates the client settings.
+         * Creates the resolver settings.
          *
          * @return The settings.
          */
         @Bean
-        ServiceSettings clientSettings() {
+        ResolverSettings resolverSettings() {
 
-            return new ServiceSettings(
-                    1000, 
-                    Duration.ofMillis( 1 )
-            );
+            return new ResolverSettings( clientSettings(), cacheSettings(), true );
 
         }
         
