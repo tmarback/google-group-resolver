@@ -24,7 +24,7 @@ public record CacheSettings(
         @DefaultValue( "1m" ) Duration ttlValid,
         @DefaultValue( "2d" ) Duration ttlStale,
         @DefaultValue( "1m" ) Duration cleanerPeriod,
-        @Valid @DefaultValue Seeder seeder
+        @Valid @DefaultValue SeederSettings seeder
 ) {
 
     /** The prefix for all settings. */
@@ -33,11 +33,9 @@ public record CacheSettings(
     /**
      * Seeder settings.
      *
-     * @param enabled Whether to enable the seeder.
-     * @param period The period for re-seeding. Set to 0 to disable.
+     * @param period The period for re-seeding. Set to 0 to run only once, or negative to disable.
      */
-    public record Seeder(
-            @DefaultValue( "true" ) boolean enabled,
+    public record SeederSettings(
             @DefaultValue( "1d" ) Duration period
     ) {}
 

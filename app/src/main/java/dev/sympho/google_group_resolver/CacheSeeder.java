@@ -9,6 +9,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.sympho.google_group_resolver.CacheSettings.SeederSettings;
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
 import reactor.core.Disposable;
@@ -45,19 +46,19 @@ public class CacheSeeder {
      *
      * @param directory The client to use.
      * @param cache The cache to seed.
-     * @param period If a positive duration, the seeding is repeated regularly with the given
-     *               period, else it only runs once at the start.
+     * @param settings The settings.
      */
     public CacheSeeder( 
             final DirectoryService directory, 
             final GroupCache cache, 
-            final Duration period
+            final SeederSettings settings
     ) {
 
         this.directory = directory;
         this.cache = cache;
-        this.period = period;
-        this.retry = RetrySpec.fixedDelay( Long.MAX_VALUE, period ).transientErrors( true );
+        this.period = settings.period();
+        this.retry = RetrySpec.fixedDelay( Long.MAX_VALUE, settings.period() )
+                .transientErrors( true );
 
     }
 
@@ -86,11 +87,15 @@ public class CacheSeeder {
     @PostConstruct
     public synchronized void start() {
 
-        if ( !period.isPositive() ) {
+        if ( period.isZero() ) {
 
             LOG.info( "Running one-off cache seeder" );
 
             seedCache().subscribe();
+
+        } else if ( period.isNegative() ) {
+
+            LOG.info( "Cache seeder is disabled" );
 
         } else if ( runner == null ) {
 

@@ -151,7 +151,7 @@ class ApplicationTests {
                     Duration.ofMinutes( 1 ), 
                     Duration.ofDays( 2 ), 
                     Duration.ofMinutes( 1 ),
-                    new CacheSettings.Seeder( false, Duration.ZERO )
+                    new CacheSettings.SeederSettings( Duration.ofSeconds( -1 ) )
             );
 
         }

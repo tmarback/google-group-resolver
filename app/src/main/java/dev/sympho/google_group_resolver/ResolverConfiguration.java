@@ -1,6 +1,5 @@
 package dev.sympho.google_group_resolver;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -48,18 +47,13 @@ public class ResolverConfiguration {
      * @return The seeder.
      */
     @Bean
-    @ConditionalOnProperty( 
-            prefix = CacheSettings.PREFIX, 
-            name = { "enabled", "seeder.enabled" }, 
-            matchIfMissing = true
-    )
     CacheSeeder seeder( 
             final DirectoryService directory, 
             final GroupCache cache, 
             final CacheSettings config 
     ) {
 
-        return new CacheSeeder( directory, cache, config.seeder().period() );
+        return new CacheSeeder( directory, cache, config.seeder() );
 
     }
 
