@@ -24,6 +24,8 @@ jobs:
       # For attestation
       id-token: write
       attestations: write
+    env:
+      IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,7 +59,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ${{ env.IMAGE_FULL_NAME }}
           tags: |
             type=edge,branch=main
             # branch name, except main, which gets the edge label
@@ -89,23 +91,38 @@ jobs:
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v4
 
-      - name: Generate artifact attestation
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Sign image
+        run: cosign sign --yes ${{ env.IMAGE_FULL_NAME }}@${{ steps.image.outputs.digest }}
+
+      - name: Generate image attestation
+        if: ${{ ! github.event.repository.private }}
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ env.IMAGE_FULL_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: false
 
-      - uses: anchore/sbom-action@v0
+      - name: Generate SBOM
+        if: ${{ ! github.event.repository.private }}
+        uses: anchore/sbom-action@v0
         with:
-          image: ghcr.io/${{ github.repository }}@${{ steps.image.outputs.digest }}
+          image: ${{ env.IMAGE_FULL_NAME }}@${{ steps.image.outputs.digest }}
           artifact-name: sbom.spdx.json
           output-file: ./sbom.spdx.json
+          upload-artifact: true
+        env:
+          SYFT_SELECT_CATALOGERS: +sbom-cataloger # Catalog nested SBOMs
 
       - name: Generate SBOM attestation
+        if: ${{ ! github.event.repository.private }}
         uses: actions/attest-sbom@v1
         with:
-          subject-name: ghcr.io/${{ github.repository }}
+          subject-name: ${{ env.IMAGE_FULL_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}
           sbom-path: ./sbom.spdx.json
-          push-to-registry: true
+          push-to-registry: false 
