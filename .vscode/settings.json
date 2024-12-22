@@ -1,0 +1,49 @@
+{
+    "java.compile.nullAnalysis.mode": "disabled",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    // Formatter
+    "java.format.settings.url": "https://config.sympho.dev/EclipseJavaFormatters.xml",
+    "java.format.settings.profile": "Personal",
+    "java.completion.importOrder": [
+        "java",
+        "javax",
+        "jakarta",
+        "com",
+        "org"
+    ],
+    // YAML editing
+    "yaml.validate": false,
+    "[yaml]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2,
+        "editor.quickSuggestions": {
+            "other": true,
+            "comments": false,
+            "strings": true
+        },
+        "editor.autoIndent": "full",
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "[yml]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2,
+        "editor.quickSuggestions": {
+            "other": true,
+            "comments": false,
+            "strings": true
+        },
+        "editor.autoIndent": "full",
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "[spring-boot-properties-yaml]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 2,
+        "editor.quickSuggestions": {
+            "other": true,
+            "comments": false,
+            "strings": true
+        },
+        "editor.autoIndent": "full",
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+}
