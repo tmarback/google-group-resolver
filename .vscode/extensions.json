@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "vmware.vscode-boot-dev-pack",
+        "tamasfe.even-better-toml",
+        "donjayamanne.githistory",
+        "github.vscode-github-actions",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml"
+    ]
+}
