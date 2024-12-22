@@ -1,0 +1,32 @@
+{
+    "name": "google-group-resolver-dev",
+    "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+
+    "features": {
+        "ghcr.io/devcontainers/features/java:1": {
+            "version": "21"
+        },
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+        "ghcr.io/guiyomh/features/vim:0": {}
+    },
+
+    "remoteEnv": { 
+        "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}" 
+    },
+
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "java.jdt.ls.java.home": null
+            },
+            "extensions": [
+                "vscjava.vscode-gradle",
+                "vmware.vscode-boot-dev-pack",
+                "tamasfe.even-better-toml",
+                "donjayamanne.githistory",
+                "github.vscode-github-actions",
+                "redhat.vscode-yaml"
+            ]
+        }
+    }
+}
