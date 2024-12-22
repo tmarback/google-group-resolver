@@ -55,6 +55,7 @@ jobs:
             ./gradlew build -Pchecker=true -Pstrict=true -Pversion=${VERSION#${{ startsWith(github.ref, 'refs/heads/support/v') && 'support/' || '' }}v}
       
       - name: Upload artifact SBOM
+        if: ${{ ! github.event.repository.private }}
         uses: actions/upload-artifact@v4
         with:
           name: sbom-jar.cdx.json
