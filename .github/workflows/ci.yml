@@ -53,6 +53,20 @@ jobs:
         run: |
             VERSION="${{ github.ref == 'refs/heads/main' && 'edge' || github.ref_name }}"
             ./gradlew build -Pchecker=true -Pstrict=true -Pversion=${VERSION#${{ startsWith(github.ref, 'refs/heads/support/v') && 'support/' || '' }}v}
+      
+      - name: Upload artifact SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-jar.cdx.json
+          path: ./app/build/reports/sbom-jar.cdx.json
+
+      - name: Generate artifact SBOM attestation
+        if: ${{ ! github.event.repository.private }}
+        uses: actions/attest-sbom@v1
+        with:
+          subject-path: ./app/build/libs/google-group-resolver.jar
+          sbom-path: ./app/build/reports/sbom-jar.cdx.json
+          push-to-registry: false 
 
       - name: Docker meta
         id: meta
@@ -107,22 +121,22 @@ jobs:
           subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: false
 
-      - name: Generate SBOM
+      - name: Generate image SBOM
         if: ${{ ! github.event.repository.private }}
         uses: anchore/sbom-action@v0
         with:
           image: ${{ env.IMAGE_FULL_NAME }}@${{ steps.image.outputs.digest }}
-          artifact-name: sbom.spdx.json
-          output-file: ./sbom.spdx.json
+          artifact-name: sbom-image.spdx.json
+          output-file: ./sbom-image.spdx.json
           upload-artifact: true
         env:
           SYFT_SELECT_CATALOGERS: +sbom-cataloger # Catalog nested SBOMs
 
-      - name: Generate SBOM attestation
+      - name: Generate image SBOM attestation
         if: ${{ ! github.event.repository.private }}
         uses: actions/attest-sbom@v1
         with:
           subject-name: ${{ env.IMAGE_FULL_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}
-          sbom-path: ./sbom.spdx.json
+          sbom-path: ./sbom-image.spdx.json
           push-to-registry: false 

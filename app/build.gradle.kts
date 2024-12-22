@@ -1,6 +1,12 @@
+import org.cyclonedx.model.AttachmentText
+import org.cyclonedx.model.License
+import org.cyclonedx.model.OrganizationalContact
+import org.cyclonedx.model.license.Expression
+
 plugins {
 	id("java-conventions")
     alias(libs.plugins.springboot)
+    alias(libs.plugins.cyclonedx)
 }
 
 dependencies {
@@ -64,4 +70,27 @@ testing {
 
 tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     this.archiveFileName.set("${rootProject.name}.${archiveExtension.get()}")
+}
+
+tasks.cyclonedxBom {
+    setComponentName("google-group-resolver")
+    setProjectType("application")
+    setOutputName("sbom-jar.cdx")
+    setOutputFormat("json")
+    setSkipConfigs(listOf("checkerFrameworkAnnotatedJDK"))
+
+    // Set contact information
+    var contact = OrganizationalContact()
+
+    contact.setName("Thiago Marback")
+    contact.setEmail("tmarback@sympho.dev")
+
+    setOrganizationalEntity { oe ->
+        oe.addContact(contact)
+    }
+
+    // Set license information
+    setLicenseChoice{ lc ->
+        lc.setExpression(Expression("MIT"))
+    }
 }
