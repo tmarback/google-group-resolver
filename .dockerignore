@@ -1,0 +1,16 @@
+# Docker
+Dockerfile
+.dockerignore
+
+# IDE
+.settings/
+.vscode/
+
+# Github
+.github/
+
+# Devcontainer
+.devcontainer/
+
+# Local files
+.local/
