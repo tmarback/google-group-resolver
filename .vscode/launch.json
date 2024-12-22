@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Application",
+            "request": "launch",
+            "mainClass": "dev.sympho.google_group_resolver.Application",
+            "projectName": "app",
+            "args": "--spring.config.additional-location=file:./.local/",
+            "env": {
+                "LOGLEVEL": "DEBUG",
+                "CREDENTIALS_PATH": "./.local/credentials.json"
+            }
+        }
+    ]
+}
