@@ -91,6 +91,10 @@ tasks.withType<Checkstyle> {
     ignoreFailures = !style
 }
 
+checkstyle {
+    toolVersion = "10.21.0"
+}
+
 val strictMode by extra { findProperty("strict") == "true" }
 
 if (strictMode) {
