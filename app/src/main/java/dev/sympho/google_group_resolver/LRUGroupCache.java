@@ -177,12 +177,12 @@ public class LRUGroupCache implements GroupCache {
         // once the lock is released, it does not actually make a difference. Thus, it's not worth
         // holding the lock for longer.
 
-        // Remove entires that are too old
+        // Remove entries that are too old
         final var valid = entries.stream()
                 .filter( e -> {
 
                     final var entry = e.getValue();
-                    if ( entry.expired() ) {
+                    if ( !entry.expired() ) {
                         return true;
                     }
 
@@ -383,7 +383,7 @@ public class LRUGroupCache implements GroupCache {
         @SideEffectFree
         public boolean expired() {
 
-            return expiredOn.isAfter( clock.instant() );
+            return !expiredOn.isAfter( clock.instant() );
 
         }
 
@@ -393,7 +393,7 @@ public class LRUGroupCache implements GroupCache {
             lastAccessed.set( clock.instant() );
 
             // Treat as empty if past clear time
-            return expired() ? cached : null;
+            return expired() ? null : cached;
 
         }
 
