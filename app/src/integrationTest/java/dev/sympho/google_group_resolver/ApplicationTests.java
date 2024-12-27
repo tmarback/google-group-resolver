@@ -22,6 +22,8 @@ import dev.sympho.google_group_resolver.google.DirectoryApi;
 import dev.sympho.google_group_resolver.google.DirectoryApiFixture;
 import dev.sympho.google_group_resolver.google.ServiceConfiguration;
 import dev.sympho.google_group_resolver.google.ServiceSettings;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 
 /**
  * Tests for the application.
@@ -112,6 +114,18 @@ class ApplicationTests {
      */
     @TestConfiguration
     public static class Configuration {
+
+        /**
+         * No-op meter registry.
+         *
+         * @return The registry.
+         */
+        @Bean
+        MeterRegistry meters() {
+
+            return new CompositeMeterRegistry();
+
+        }
 
         /**
          * Creates the API client.

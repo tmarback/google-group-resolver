@@ -15,7 +15,12 @@ import org.checkerframework.dataflow.qual.SideEffectFree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.sympho.google_group_resolver.Metrics;
+import dev.sympho.google_group_resolver.Utils;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.Disposable;
+import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.BufferOverflowStrategy;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
@@ -32,6 +37,21 @@ import reactor.core.scheduler.Schedulers;
  * and the reactive interface.
  */
 public class DirectoryServiceProvider implements DirectoryService {
+
+    /** Metric tag for the task type. */
+    public static final String METRIC_TAG_TASK_TYPE = "task.type";
+
+    /** Base metric name. */
+    public static final Metrics.MetricName METRIC_BASE = Metrics.DIRECTORY_BASE.extend( "service" );
+
+    /** Metric name for tasks. */
+    public static final Metrics.MetricName METRIC_TASKS = METRIC_BASE.extend( "tasks" );
+
+    /** Metric name for dropped tasks. */
+    public static final Metrics.MetricName METRIC_DROPPED = METRIC_TASKS.extend( "dropped" );
+
+    /** Metric name for issued tasks. */
+    public static final Metrics.MetricName METRIC_ISSUED = METRIC_TASKS.extend( "issued" );
 
     /** 
      * The maximum amount of time that the flux issued by {@link #getGroupsFor(String)} waits
@@ -98,6 +118,9 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private final Scheduler taskProcessScheduler = Schedulers.parallel();
 
+    /** The meter registry in use. */
+    private final MeterRegistry meters;
+
     /** The running task handler. */
     private @Nullable Disposable running;
 
@@ -108,16 +131,20 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param batchSize The maximum amount of requests to have in a batch.
      * @param batchTimeout The maximum amount of time to wait to collect batch entries, 
      *                     before continuing with a partially-filled batch. 
+     * @param meters The meter registry to use.
      */
     public DirectoryServiceProvider( 
             final DirectoryApi client,
             final int batchSize,
-            final Duration batchTimeout
+            final Duration batchTimeout,
+            final MeterRegistry meters
     ) {
 
         this.client = client;
         this.batchSize = batchSize;
         this.batchTimeout = batchTimeout;
+
+        this.meters = meters;
 
     }
 
@@ -164,20 +191,37 @@ public class DirectoryServiceProvider implements DirectoryService {
                     .publishOn( taskProcessScheduler )
                     .onBackpressureBuffer( 
                         TASK_BUFFER_SIZE, 
-                        // Signal error on any dropped tasks
-                        task -> task.emitter().error( new IllegalStateException(
-                            "Directory API task buffer overflow"
-                        ) ), 
+                        task -> {
+                            Counter.builder( METRIC_DROPPED.name() )
+                                    .description( 
+                                            "Amount of tags dropped due to lack of backpressure"
+                                    )
+                                    .tag( METRIC_TAG_TASK_TYPE, task.getClass().getSimpleName() )
+                                    .register( meters )
+                                    .increment();
+                            // Signal error on any dropped tasks
+                            task.emitter().error( new IllegalStateException(
+                                    "Directory API task buffer overflow"
+                            ) );
+                        }, 
                         // Don't kill the stream on backpressure issues
                         // Drop oldest since it has a higher chance of being near a timeout anyway
                         BufferOverflowStrategy.DROP_OLDEST 
                     )
                     .doOnNext( t -> LOG.trace( "Task {} received", t ) )
                     .bufferTimeout( batchSize, batchTimeout )
-                    .doOnNext( t -> LOG.trace(
+                    .doOnNext( ts -> LOG.trace(
                             "Issuing batch with {} tasks",
-                            t.size()
+                            ts.size()
                     ) )
+                    .doOnNext( ts -> Utils.countBy( ts, Task::tag )
+                            .forEach( ( tag, count ) -> Counter.builder( METRIC_ISSUED.name() )
+                                    .description( "Amount of tasks issued for execution" )
+                                    .tag( METRIC_TAG_TASK_TYPE, tag )
+                                    .register( meters )
+                                    .increment( count ) 
+                            )
+                    )
                     .publishOn( requestScheduler )
                     .doOnNext( this::doTasks )
                     .repeat()
@@ -226,17 +270,22 @@ public class DirectoryServiceProvider implements DirectoryService {
      *
      * @param <V> The type of task result values.
      * @param taskFactory The factory to use to create a task from the sink.
+     * @param taskTag The task type identifier.
      * @return The task results.
      */
     private <V extends @NonNull Object> Flux<V> submitTask( 
-            final Function<FluxSink<V>, Task<V>> taskFactory
+            final Function<FluxSink<V>, Task<V>> taskFactory,
+            final String taskTag
     ) {
 
         return Flux.<V>push( emitter -> submitTask( 
                         taskFactory.apply( emitter ) 
                 ) )
                 .publishOn( responseScheduler )
-                .timeout( RESULT_TIMEOUT ); // Timeout in case somehow the task gets lost
+                .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
+                .name( METRIC_TASKS.name() )
+                .tag( METRIC_TAG_TASK_TYPE, taskTag )
+                .tap( Micrometer.metrics( meters ) );
 
     }
 
@@ -245,7 +294,8 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         // Submit group fetch as a task
         return this.<DirectoryGroup>submitTask( 
-                        emitter -> new GroupMembershipTask( this, email, emitter, null ) 
+                        emitter -> new GroupMembershipTask( this, email, emitter, null ),
+                        GroupMembershipTask.TAG
                 )
                 .checkpoint( "Get group memberships" );
 
@@ -256,7 +306,8 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         // Submit group fetch as a task
         return this.<DirectoryGroup>submitTask( 
-                        emitter -> new GroupListTask( this, emitter, null ) 
+                        emitter -> new GroupListTask( this, emitter, null ),
+                        GroupListTask.TAG
                 )
                 .checkpoint( "Get group list" );
 
@@ -269,6 +320,14 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private interface Task<V extends @NonNull Object> 
             extends DirectoryApi.Callback<DirectoryApi.ListResult<V>> {
+
+        /**
+         * The request tag.
+         *
+         * @return The tag.
+         */
+        @Pure
+        String tag();
 
         /**
          * Converts the task to an API request.
@@ -370,6 +429,16 @@ public class DirectoryServiceProvider implements DirectoryService {
             @Nullable String pageToken
     ) implements Task<DirectoryGroup> {
 
+        /** The request tag. */
+        public static final String TAG = "group-membership";
+
+        @Override
+        public String tag() {
+
+            return TAG;
+
+        }
+
         @Override
         public DirectoryApi.Request<DirectoryApi.ListResult<DirectoryGroup>> toRequest() {
 
@@ -408,6 +477,16 @@ public class DirectoryServiceProvider implements DirectoryService {
             FluxSink<DirectoryGroup> emitter,
             @Nullable String pageToken
     ) implements Task<DirectoryGroup> {
+
+        /** The request tag. */
+        public static final String TAG = "group-list";
+
+        @Override
+        public String tag() {
+
+            return TAG;
+
+        }
 
         @Override
         public DirectoryApi.Request<DirectoryApi.ListResult<DirectoryGroup>> toRequest() {
