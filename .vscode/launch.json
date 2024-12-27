@@ -9,8 +9,7 @@
             "projectName": "app",
             "args": "--spring.config.additional-location=file:./.local/",
             "env": {
-                "LOGLEVEL": "DEBUG",
-                "CREDENTIALS_PATH": "./.local/credentials.json"
+                "LOGLEVEL": "DEBUG"
             }
         }
     ]
