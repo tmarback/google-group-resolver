@@ -5,6 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
+import reactor.core.publisher.Hooks;
+
 /**
  * Application bootstrap class.
  */
@@ -23,6 +25,9 @@ public class Application {
      */
     @SuppressWarnings( "required.method.not.called" ) // registerShutdownHook deals with close()
     public static void main( final String[] args ) {
+
+        // Enable context propagation
+        Hooks.enableAutomaticContextPropagation();
 
         new SpringApplicationBuilder( Application.class )
                 .web( WebApplicationType.REACTIVE )
