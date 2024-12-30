@@ -27,6 +27,8 @@ dependencies {
     implementation("io.projectreactor:reactor-core-micrometer")
 
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
+    runtimeOnly("io.micrometer:micrometer-tracing-bridge-otel")
+    runtimeOnly("io.opentelemetry:opentelemetry-exporter-otlp")
     runtimeOnly("ch.qos.logback:logback-classic")
 
     // Test fixture
@@ -51,6 +53,12 @@ dependencies {
     developmentOnly(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)) // https://github.com/gradle/gradle/issues/12519
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+}
+
+configurations {
+    all {
+        exclude(group = "commons-logging", module = "commons-logging")
+    }
 }
 
 testing {
