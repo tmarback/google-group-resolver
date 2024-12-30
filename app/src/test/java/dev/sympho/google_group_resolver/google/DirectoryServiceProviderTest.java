@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import dev.sympho.google_group_resolver.CustomResourceLocks;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -71,7 +72,8 @@ public class DirectoryServiceProviderTest {
                 apiClient, 
                 BATCH_SIZE, 
                 BATCH_TIMEOUT,
-                new CompositeMeterRegistry() 
+                new CompositeMeterRegistry(),
+                ObservationRegistry.NOOP
         );
         iut.start();
 

@@ -24,6 +24,7 @@ import dev.sympho.google_group_resolver.google.ServiceConfiguration;
 import dev.sympho.google_group_resolver.google.ServiceSettings;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 
 /**
  * Tests for the application.
@@ -124,6 +125,18 @@ class ApplicationTests {
         MeterRegistry meters() {
 
             return new CompositeMeterRegistry();
+
+        }
+
+        /**
+         * No-op observation registry.
+         *
+         * @return The registry.
+         */
+        @Bean
+        ObservationRegistry observations() {
+
+            return ObservationRegistry.NOOP;
 
         }
 

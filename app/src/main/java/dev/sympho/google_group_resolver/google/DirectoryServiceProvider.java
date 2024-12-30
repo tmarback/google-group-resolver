@@ -19,6 +19,7 @@ import dev.sympho.google_group_resolver.Metrics;
 import dev.sympho.google_group_resolver.Utils;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import reactor.core.Disposable;
 import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.BufferOverflowStrategy;
@@ -52,6 +53,9 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     /** Metric name for issued tasks. */
     public static final Metrics.MetricName METRIC_ISSUED = METRIC_TASKS.extend( "issued" );
+
+    /** Metric name for executed batches. */
+    public static final Metrics.MetricName METRIC_BATCH = METRIC_BASE.extend( "batch" );
 
     /** 
      * The maximum amount of time that the flux issued by {@link #getGroupsFor(String)} waits
@@ -121,6 +125,9 @@ public class DirectoryServiceProvider implements DirectoryService {
     /** The meter registry in use. */
     private final MeterRegistry meters;
 
+    /** The observation registry in use. */
+    private final ObservationRegistry observations;
+
     /** The running task handler. */
     private @Nullable Disposable running;
 
@@ -132,12 +139,14 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param batchTimeout The maximum amount of time to wait to collect batch entries, 
      *                     before continuing with a partially-filled batch. 
      * @param meters The meter registry to use.
+     * @param observations The observation registry to use.
      */
     public DirectoryServiceProvider( 
             final DirectoryApi client,
             final int batchSize,
             final Duration batchTimeout,
-            final MeterRegistry meters
+            final MeterRegistry meters,
+            final ObservationRegistry observations
     ) {
 
         this.client = client;
@@ -145,6 +154,7 @@ public class DirectoryServiceProvider implements DirectoryService {
         this.batchTimeout = batchTimeout;
 
         this.meters = meters;
+        this.observations = observations;
 
     }
 
@@ -223,7 +233,11 @@ public class DirectoryServiceProvider implements DirectoryService {
                             )
                     )
                     .publishOn( requestScheduler )
-                    .doOnNext( this::doTasks )
+                    .flatMap( tasks -> Mono.fromRunnable( () -> doTasks( tasks ) )
+                            .name( METRIC_BATCH.name() )
+                            .tap( Micrometer.metrics( meters ) )
+                            .tap( Micrometer.observation( observations ) )
+                    )
                     .repeat()
                     .subscribe();
         }
@@ -285,7 +299,8 @@ public class DirectoryServiceProvider implements DirectoryService {
                 .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
                 .name( METRIC_TASKS.name() )
                 .tag( METRIC_TAG_TASK_TYPE, taskTag )
-                .tap( Micrometer.metrics( meters ) );
+                .tap( Micrometer.metrics( meters ) )
+                .tap( Micrometer.observation( observations ) );
 
     }
 
