@@ -42,6 +42,9 @@ public class DirectoryServiceProvider implements DirectoryService {
     /** Metric tag for the task type. */
     public static final String METRIC_TAG_TASK_TYPE = "task.type";
 
+    /** Metric tag for the task count. */
+    public static final String METRIC_TAG_TASK_COUNT = "task.count";
+
     /** Base metric name. */
     public static final Metrics.MetricName METRIC_BASE = Metrics.DIRECTORY_BASE.extend( "service" );
 
@@ -169,6 +172,11 @@ public class DirectoryServiceProvider implements DirectoryService {
             LOG.warn( "Empty batch received" );
             return;
         }
+        
+        Utils.ifObservation( observations, obs -> obs.highCardinalityKeyValue( 
+                METRIC_TAG_TASK_COUNT, 
+                String.valueOf( tasks.size() )
+        ) );
 
         if ( tasks.size() == 1 ) {
             // Shortcut to direct call if there is only one
