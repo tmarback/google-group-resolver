@@ -2,6 +2,7 @@
 google-oauth-client = { module = "com.google.oauth-client:google-oauth-client-jetty", version = "1.37.0" }
 google-api-directory = { module = "com.google.apis:google-api-services-admin-directory", version = "directory_v1-rev20241210-2.0.0" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
+otel-logs-autoconfigure = { module = "am.ik.spring.opentelemetry:otel-logs-autoconfigure", version = "0.3.0" }
 # For getting rid of annotation warnings
 spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "7.1.0" }

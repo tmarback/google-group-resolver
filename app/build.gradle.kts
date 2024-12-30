@@ -30,6 +30,7 @@ dependencies {
     runtimeOnly("io.micrometer:micrometer-tracing-bridge-otel")
     runtimeOnly("io.opentelemetry:opentelemetry-exporter-otlp")
     runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly(libs.otel.logs.autoconfigure)
 
     // Test fixture
     testFixturesImplementation(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES))
