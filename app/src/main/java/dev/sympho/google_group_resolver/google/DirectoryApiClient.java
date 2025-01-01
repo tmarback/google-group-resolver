@@ -17,6 +17,11 @@ import com.google.api.services.directory.model.Groups;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
+import org.springframework.util.function.ThrowingSupplier;
+
+import dev.sympho.google_group_resolver.Metrics;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 
 /**
  * Client that access the Workspaces Directory API.
@@ -27,17 +32,43 @@ public class DirectoryApiClient implements DirectoryApi {
     /** The maximum amount of requests in a batch. */
     public static final int MAX_BATCH_SIZE = 1000;
 
+    /** Metric tag for the request type. */
+    public static final String METRIC_TAG_REQUEST_TYPE = "request.type";
+
+    /** Metric tag for the request count in a batch. */
+    public static final String METRIC_TAG_REQUEST_COUNT = "request.count";
+
+    /** Metric tag value for a single request. */
+    public static final String METRIC_TAG_VALUE_SINGLE = "single";
+
+    /** Metric tag value for a batch request. */
+    public static final String METRIC_TAG_VALUE_BATCH = "batch";
+
+    /** Base metric name. */
+    public static final Metrics.MetricName METRIC_BASE = Metrics.DIRECTORY_BASE.extend( "api" );
+
+    /** Metric name for API requests. */
+    public static final Metrics.MetricName METRIC_REQUEST = METRIC_BASE.extend( "request" );
+
+    /** Metric name for request execution. */
+    public static final Metrics.MetricName METRIC_EXECUTE = METRIC_REQUEST.extend( "execute" );
+
     /** The API client. */
     private final Directory client;
+
+    /** The observation registry in use. */
+    private final ObservationRegistry observations;
 
     /**
      * Creates a new instance.
      *
      * @param client The API client to use.
+     * @param observations The observation registry to use.
      */
-    public DirectoryApiClient( final Directory client ) {
+    public DirectoryApiClient( final Directory client, final ObservationRegistry observations ) {
 
         this.client = client;
+        this.observations = observations;
 
     }
 
@@ -72,13 +103,19 @@ public class DirectoryApiClient implements DirectoryApi {
 
         // var here makes Checker crash
         final DirectoryRequest<G> rawRequest = request.createRequest( client );
-        final var result = rawRequest.execute();
+        final var result = Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
+                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
+                .observe( ThrowingSupplier.of( () -> rawRequest.execute() ) );
         request.issueResult( result );
 
     }
 
-    @Override
-    public void makeRequest( final Request<?> request ) {
+    /**
+     * Executes a request.
+     *
+     * @param request The request to execute.
+     */
+    public void doMakeRequest( final Request<?> request ) {
 
         try {
             executeRequest( convertRequest( request ) );
@@ -89,6 +126,15 @@ public class DirectoryApiClient implements DirectoryApi {
         } catch ( final Exception ex ) {
             request.callback().onError( ex );
         }
+
+    }
+
+    @Override
+    public void makeRequest( final Request<?> request ) {
+
+        Observation.createNotStarted( METRIC_REQUEST.name(), observations )
+                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
+                .observe( () -> doMakeRequest( request ) );
 
     }
 
@@ -115,8 +161,13 @@ public class DirectoryApiClient implements DirectoryApi {
 
     }
 
-    @Override
-    public void makeRequestBatch( final Collection<? extends Request<?>> requests ) {
+    /**
+     * Executes a request batch.
+     *
+     * @param requests The requests to execute.
+     * @throws IllegalArgumentException if the batch is empty.
+     */
+    public void doMakeRequestBatch( final Collection<? extends Request<?>> requests ) {
 
         if ( requests.isEmpty() ) {
             throw new IllegalArgumentException( "No requests in batch" );
@@ -143,10 +194,35 @@ public class DirectoryApiClient implements DirectoryApi {
         } ).toList();
 
         try {
-            batch.execute();
+            Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
+                    .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
+                    .highCardinalityKeyValue( 
+                            METRIC_TAG_REQUEST_COUNT, 
+                            String.valueOf( queued.size() ) 
+                    )
+                    .observe( () -> {
+                        try {
+                            batch.execute();
+                        } catch ( final IOException ex ) {
+                            throw new RuntimeException( ex );
+                        }
+                    } );
         } catch ( final Exception ex ) {
             queued.forEach( request -> request.callback().onError( ex ) );
         }
+
+    }
+
+    @Override
+    public void makeRequestBatch( final Collection<? extends Request<?>> requests ) {
+
+        Observation.createNotStarted( METRIC_REQUEST.name(), observations )
+                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
+                .highCardinalityKeyValue( 
+                        METRIC_TAG_REQUEST_COUNT, 
+                        String.valueOf( requests.size() ) 
+                )
+                .observe( () -> doMakeRequestBatch( requests ) );
 
     }
 

@@ -17,6 +17,8 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import io.micrometer.observation.ObservationRegistry;
+
 /**
  * API client configuration.
  */
@@ -35,13 +37,14 @@ public class ApiConfiguration {
      * Creates the Directory API client.
      *
      * @param creds The API credentials.
+     * @param observations The observation registry to use.
      * @return The API client.
      * @throws IOException if an error ocurred.
      * @throws GeneralSecurityException if an error ocurred.
      * @throws IllegalArgumentException if the configuration is invalid.
      */
     @Bean
-    DirectoryApiClient client( final ApiCredentials creds ) 
+    DirectoryApiClient client( final ApiCredentials creds, final ObservationRegistry observations )
             throws IOException, GeneralSecurityException, IllegalArgumentException {
 
         if ( !creds.path().toFile().exists() ) {
@@ -63,7 +66,7 @@ public class ApiConfiguration {
                 .setApplicationName( "group-resolver" )
                 .build();
 
-        return new DirectoryApiClient( client );
+        return new DirectoryApiClient( client, observations );
 
     }
     
