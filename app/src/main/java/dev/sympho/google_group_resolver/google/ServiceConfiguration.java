@@ -36,6 +36,7 @@ public class ServiceConfiguration {
                 client, 
                 config.batchSize(), 
                 config.batchTimeout(),
+                config.requestConcurrency(),
                 meters,
                 observations
         );

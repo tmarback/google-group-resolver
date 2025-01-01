@@ -160,8 +160,9 @@ class ApplicationTests {
         ServiceSettings clientSettings() {
 
             return new ServiceSettings(
-                    1000, 
-                    Duration.ofMillis( 1 )
+                    100, 
+                    Duration.ofMillis( 1 ),
+                    5
             );
 
         }

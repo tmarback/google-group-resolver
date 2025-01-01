@@ -49,6 +49,9 @@ public class DirectoryServiceProviderTest {
     /** Batch timeout to use. */
     private static final Duration BATCH_TIMEOUT = Duration.ofMillis( 100 );
 
+    /** Request concurrency to use. */
+    private static final int REQUEST_CONCURRENCY = 5;
+
     /** The virtual scheduler to use. */
     VirtualTimeScheduler scheduler;
 
@@ -72,6 +75,7 @@ public class DirectoryServiceProviderTest {
                 apiClient, 
                 BATCH_SIZE, 
                 BATCH_TIMEOUT,
+                REQUEST_CONCURRENCY,
                 new CompositeMeterRegistry(),
                 ObservationRegistry.NOOP
         );

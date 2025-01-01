@@ -93,6 +93,8 @@ public class DirectoryServiceProvider implements DirectoryService {
      * before continuing with a partially-filled batch. 
      */
     private final Duration batchTimeout;
+    /** The maximum number of concurrent inflight requests. */
+    private final int requestConcurrency;
 
     /** The sink used to issue tasks. */
     private final Sinks.Many<Task<?>> taskSink = Sinks.many()
@@ -140,7 +142,8 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param client The API client to use.
      * @param batchSize The maximum amount of requests to have in a batch.
      * @param batchTimeout The maximum amount of time to wait to collect batch entries, 
-     *                     before continuing with a partially-filled batch. 
+     *                     before continuing with a partially-filled batch.
+     * @param requestConcurrency The maximum number of concurrent inflight requests. 
      * @param meters The meter registry to use.
      * @param observations The observation registry to use.
      */
@@ -148,6 +151,7 @@ public class DirectoryServiceProvider implements DirectoryService {
             final DirectoryApi client,
             final int batchSize,
             final Duration batchTimeout,
+            final int requestConcurrency,
             final MeterRegistry meters,
             final ObservationRegistry observations
     ) {
@@ -155,6 +159,7 @@ public class DirectoryServiceProvider implements DirectoryService {
         this.client = client;
         this.batchSize = batchSize;
         this.batchTimeout = batchTimeout;
+        this.requestConcurrency = requestConcurrency;
 
         this.meters = meters;
         this.observations = observations;
@@ -207,6 +212,7 @@ public class DirectoryServiceProvider implements DirectoryService {
             LOG.info( "Starting directory API client" );
             this.running = taskSink.asFlux()
                     .publishOn( taskProcessScheduler )
+                    .doOnNext( t -> LOG.trace( "Task {} received", t ) )
                     .onBackpressureBuffer( 
                         TASK_BUFFER_SIZE, 
                         task -> {
@@ -214,7 +220,7 @@ public class DirectoryServiceProvider implements DirectoryService {
                                     .description( 
                                             "Amount of tags dropped due to lack of backpressure"
                                     )
-                                    .tag( METRIC_TAG_TASK_TYPE, task.getClass().getSimpleName() )
+                                    .tag( METRIC_TAG_TASK_TYPE, task.tag() )
                                     .register( meters )
                                     .increment();
                             // Signal error on any dropped tasks
@@ -226,8 +232,7 @@ public class DirectoryServiceProvider implements DirectoryService {
                         // Drop oldest since it has a higher chance of being near a timeout anyway
                         BufferOverflowStrategy.DROP_OLDEST 
                     )
-                    .doOnNext( t -> LOG.trace( "Task {} received", t ) )
-                    .bufferTimeout( batchSize, batchTimeout )
+                    .bufferTimeout( batchSize, batchTimeout, true )
                     .doOnNext( ts -> LOG.trace(
                             "Issuing batch with {} tasks",
                             ts.size()
@@ -240,11 +245,12 @@ public class DirectoryServiceProvider implements DirectoryService {
                                     .increment( count ) 
                             )
                     )
-                    .publishOn( requestScheduler )
                     .flatMap( tasks -> Mono.fromRunnable( () -> doTasks( tasks ) )
                             .name( METRIC_BATCH.name() )
                             .tap( Micrometer.metrics( meters ) )
                             .tap( Micrometer.observation( observations ) )
+                            .subscribeOn( requestScheduler ),
+                            requestConcurrency
                     )
                     .repeat()
                     .subscribe();
