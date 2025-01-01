@@ -63,7 +63,7 @@ jobs:
 
       - name: Generate artifact SBOM attestation
         if: ${{ ! github.event.repository.private }}
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-path: ./app/build/libs/google-group-resolver.jar
           sbom-path: ./app/build/reports/sbom-jar.cdx.json
@@ -135,7 +135,7 @@ jobs:
 
       - name: Generate image SBOM attestation
         if: ${{ ! github.event.repository.private }}
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-name: ${{ env.IMAGE_FULL_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}
