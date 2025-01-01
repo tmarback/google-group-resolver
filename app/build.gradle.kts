@@ -39,6 +39,7 @@ dependencies {
 
     // Integration tests
     integrationTestImplementation("io.micrometer:micrometer-core")
+    integrationTestCompileOnly("jakarta.validation:jakarta.validation-api") // Fixes validation annotations not being found
 
     // Annotation processing
     annotationProcessor(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)) // https://github.com/gradle/gradle/issues/12519
@@ -49,7 +50,6 @@ dependencies {
     annotationProcessor(libs.spotbugs)
     annotationProcessor(libs.bnd.annotation)
     annotationProcessor(libs.osgi.annotation)
-    annotationProcessor("jakarta.validation:jakarta.validation-api")
 
     // Dev tools
     developmentOnly(enforcedPlatform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)) // https://github.com/gradle/gradle/issues/12519
