@@ -88,7 +88,7 @@ public class RecursiveGroupResolverTest {
 
             cache = Objects.requireNonNull( makeCache( directory ) );
 
-            iut = new RecursiveGroupResolver( cache, prefetch() );
+            iut = new RecursiveGroupResolver( cache, prefetch(), ObservationRegistry.NOOP );
 
         }
 

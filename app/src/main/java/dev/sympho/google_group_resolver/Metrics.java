@@ -6,6 +6,8 @@ import java.util.stream.Stream;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 
+import io.micrometer.observation.ObservationRegistry;
+
 /**
  * Utilities for dealing with metrics.
  */
@@ -19,6 +21,46 @@ public final class Metrics {
 
     /** Do not instantiate. */
     private Metrics() {}
+
+    /**
+     * Adds a low cardinality key value to the current observation, if one exists.
+     *
+     * @param registry The observation registry in use.
+     * @param tagKey The key.
+     * @param tagValue The value.
+     */
+    public static void addLowCardinalityKeyValue( 
+            final ObservationRegistry registry,
+            final String tagKey, 
+            final String tagValue
+    ) {
+
+        Utils.ifObservation( 
+                registry, 
+                observation -> observation.lowCardinalityKeyValue( tagKey, tagValue ) 
+        );
+
+    }
+
+    /**
+     * Adds a high cardinality key value to the current observation, if one exists.
+     *
+     * @param registry The observation registry in use.
+     * @param tagKey The key.
+     * @param tagValue The value.
+     */
+    public static void addHighCardinalityKeyValue( 
+            final ObservationRegistry registry,
+            final String tagKey, 
+            final String tagValue
+    ) {
+
+        Utils.ifObservation( 
+                registry, 
+                observation -> observation.highCardinalityKeyValue( tagKey, tagValue ) 
+        );
+
+    }
 
     /**
      * Extends a metric name.

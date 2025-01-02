@@ -92,12 +92,17 @@ public class ResolverConfiguration {
      *
      * @param cache The group cache.
      * @param config The resolver settings.
+     * @param observations The observation registry to use.
      * @return The resolver.
      */
     @Bean
-    RecursiveGroupResolver resolver( final GroupCache cache, final ResolverSettings config ) {
+    RecursiveGroupResolver resolver( 
+            final GroupCache cache, 
+            final ResolverSettings config,
+            final ObservationRegistry observations 
+    ) {
 
-        return new RecursiveGroupResolver( cache, config.prefetch() );
+        return new RecursiveGroupResolver( cache, config.prefetch(), observations );
 
     }
     
