@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 import dev.sympho.google_group_resolver.google.DirectoryService;
 import dev.sympho.google_group_resolver.google.ServiceSettings;
+import io.micrometer.observation.ObservationRegistry;
 
 /**
  * Configuration for the group resolver.
@@ -42,10 +43,15 @@ public class ResolverConfiguration {
      *
      * @param directory The directory service.
      * @param config The cache settings.
+     * @param observations The observation registry to use.
      * @return The group cache.
      */
     @Bean
-    GroupCache cache( final DirectoryService directory, final CacheSettings config ) {
+    GroupCache cache( 
+            final DirectoryService directory, 
+            final CacheSettings config, 
+            final ObservationRegistry observations 
+    ) {
 
         if ( config.enabled() ) {
             return new LRUGroupCache( 
@@ -53,7 +59,8 @@ public class ResolverConfiguration {
                     config.ttlValid(), 
                     config.ttlStale(), 
                     config.cleanerPeriod(), 
-                    config.capacity()
+                    config.capacity(),
+                    observations
             );
         } else {
             return new PassthroughGroupCache( directory );

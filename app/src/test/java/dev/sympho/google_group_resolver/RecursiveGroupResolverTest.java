@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.sympho.google_group_resolver.google.DirectoryApiFixture;
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
+import io.micrometer.observation.ObservationRegistry;
 import reactor.core.publisher.Flux;
 import reactor.scheduler.clock.SchedulerClock;
 import reactor.test.StepVerifier;
@@ -334,7 +335,8 @@ public class RecursiveGroupResolverTest {
                     TTL_STALE,
                     CLEANER_PERIOD,
                     CACHE_SIZE,
-                    clock
+                    clock,
+                    ObservationRegistry.NOOP
             );
 
             cache.startCleaner();

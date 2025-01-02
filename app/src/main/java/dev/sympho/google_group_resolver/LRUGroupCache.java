@@ -16,7 +16,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
+import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.interning.qual.UsesObjectEquals;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.util.NullnessUtil;
 import org.checkerframework.dataflow.qual.Pure;
@@ -26,7 +28,10 @@ import org.slf4j.LoggerFactory;
 
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import reactor.core.Disposable;
+import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -44,6 +49,30 @@ import reactor.core.scheduler.Schedulers;
  * frequently is likely to be ineffective).
  */
 public class LRUGroupCache implements GroupCache {
+
+    /** Metric tag for entries manipulated in cleanup. */
+    public static final String METRIC_TAG_CLEANUP_ENTRIES = "entries";
+
+    /** Base metric name. */
+    public static final Metrics.MetricName METRIC_BASE = Metrics.APP_BASE.extend( "cache" );
+
+    /** Metric for cache lookups. */
+    public static final Metrics.MetricName METRIC_LOOKUPS = METRIC_BASE.extend( "lookup" );
+
+    /** Metric for cache updates. */
+    public static final Metrics.MetricName METRIC_UPDATE = METRIC_BASE.extend( "update" );
+
+    /** Metric for cache cleanups. */
+    public static final Metrics.MetricName METRIC_CLEANUP = METRIC_BASE.extend( "cleanup" );
+
+    /** Metric for cache cleanup copy operation. */
+    public static final Metrics.MetricName METRIC_CLEANUP_COPY = METRIC_CLEANUP.extend( "copy" );
+
+    /** Metric for cache cleanup of old entries. */
+    public static final Metrics.MetricName METRIC_CLEANUP_OLD = METRIC_CLEANUP.extend( "old" );
+
+    /** Metric for cache cleanup of excess entries. */
+    public static final Metrics.MetricName METRIC_CLEANUP_EXTRA = METRIC_CLEANUP.extend( "excess" );
 
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger( LRUGroupCache.class );
@@ -72,6 +101,9 @@ public class LRUGroupCache implements GroupCache {
     /** The clock to use. */
     private final Clock clock;
 
+    /** The observation registry in use. */
+    private final ObservationRegistry observations;
+
     /** Active cleaner process. */
     private @Nullable Disposable cleaner;
 
@@ -84,6 +116,7 @@ public class LRUGroupCache implements GroupCache {
      * @param cleanerPeriod Period between runs of the cleaner.
      * @param capacity The target capacity of the cache.
      * @param clock The clock to use.
+     * @param observations The observation registry to use.
      */
     @Pure
     public LRUGroupCache( 
@@ -92,7 +125,8 @@ public class LRUGroupCache implements GroupCache {
             final Duration ttlStale,
             final Duration cleanerPeriod,
             final int capacity,
-            final Clock clock 
+            final Clock clock,
+            final ObservationRegistry observations
     ) {
 
         this.directory = Objects.requireNonNull( directory );
@@ -101,6 +135,7 @@ public class LRUGroupCache implements GroupCache {
         this.cleanerPeriod = Objects.requireNonNull( cleanerPeriod );
         this.capacity = capacity;
         this.clock = Objects.requireNonNull( clock );
+        this.observations = Objects.requireNonNull( observations );
 
     }
 
@@ -112,6 +147,7 @@ public class LRUGroupCache implements GroupCache {
      * @param ttlStale How long after becoming stale that data should become expired.
      * @param cleanerPeriod Period between runs of the cleaner.
      * @param capacity The target capacity of the cache.
+     * @param observations The observation registry to use.
      */
     @Pure
     public LRUGroupCache( 
@@ -119,10 +155,19 @@ public class LRUGroupCache implements GroupCache {
             final Duration ttlLive,
             final Duration ttlStale,
             final Duration cleanerPeriod,
-            final int capacity
+            final int capacity,
+            final ObservationRegistry observations
     ) {
 
-        this( directory, ttlLive, ttlStale, cleanerPeriod, capacity, Clock.systemUTC() );
+        this( 
+                directory, 
+                ttlLive, 
+                ttlStale, 
+                cleanerPeriod, 
+                capacity, 
+                Clock.systemUTC(), 
+                observations
+        );
 
     }
 
@@ -165,7 +210,12 @@ public class LRUGroupCache implements GroupCache {
         final var l = lock.writeLock();
         try {
             l.lock(); // Can't allow modifications while iterating
-            entries = List.copyOf( cache.entrySet() );
+            entries = Observation.createNotStarted( METRIC_CLEANUP_COPY.name(), observations )
+                    .highCardinalityKeyValue( 
+                            METRIC_TAG_CLEANUP_ENTRIES, 
+                            String.valueOf( cache.size() ) 
+                    )
+                    .observe( () -> List.copyOf( cache.entrySet() ) );
         } finally {
             l.unlock();
         }
@@ -178,20 +228,36 @@ public class LRUGroupCache implements GroupCache {
         // holding the lock for longer.
 
         // Remove entries that are too old
-        final var valid = entries.stream()
-                .filter( e -> {
+        final var observationOld = Observation.createNotStarted( 
+                METRIC_CLEANUP_OLD.name(), 
+                observations
+        );
+        // Checker thinks it's uninitialized for some reason?
+        final @Initialized @NonNull List<Map.Entry<String, EntryImpl>> valid;
+        valid = observationOld.observe( () -> {
+            final var v = entries.stream()
+                    .filter( e -> {
 
-                    final var entry = e.getValue();
-                    if ( !entry.expired() ) {
-                        return true;
-                    }
+                        final var entry = e.getValue();
+                        if ( !entry.expired() ) {
+                            return true;
+                        }
 
-                    cache.remove( e.getKey(), e.getValue() );
-                    return false;
+                        cache.remove( e.getKey(), e.getValue() );
+                        return false;
 
-                } )
-                .toList();
-        LOG.debug( "Removed {} expired entries", entries.size() - valid.size() );
+                    } )
+                    .toList();
+
+            final var removed = entries.size() - v.size();
+            LOG.debug( "Removed {} expired entries", removed );
+            observationOld.highCardinalityKeyValue( 
+                    METRIC_TAG_CLEANUP_ENTRIES, 
+                    String.valueOf( removed ) 
+            );
+
+            return v;
+        } );
 
         // If number of entries exceeds size, remove enough entries to match size
         final var excess = valid.size() - capacity;
@@ -211,12 +277,26 @@ public class LRUGroupCache implements GroupCache {
 
             // Remove entries with the oldest last-access timestamp first
             final var oldest = sorted.subList( 0, excess );
-            oldest.forEach( e -> {
-                if ( cache.remove( e.getKey(), e.getValue() ) ) {
-                    LOG.trace( "Removed entry {}", e.getKey() );
-                } else {
-                    LOG.trace( "Entry {} was overwritten before deletion", e.getKey() );
-                }
+            final var observationExtra = Observation.createNotStarted( 
+                    METRIC_CLEANUP_EXTRA.name(), 
+                    observations 
+            );
+            observationExtra.observe( () -> {
+                final var removed = oldest.stream()
+                        .filter( e -> {
+                            if ( cache.remove( e.getKey(), e.getValue() ) ) {
+                                LOG.trace( "Removed entry {}", e.getKey() );
+                                return true;
+                            } else {
+                                LOG.trace( "Entry {} was overwritten before deletion", e.getKey() );
+                                return false;
+                            }
+                        } )
+                        .count();
+                observationExtra.highCardinalityKeyValue( 
+                        METRIC_TAG_CLEANUP_ENTRIES, 
+                        String.valueOf( removed ) 
+                );
             } );
         }
 
@@ -248,7 +328,11 @@ public class LRUGroupCache implements GroupCache {
                     // Task may block waiting for the lock so change schedulers
                     .publishOn( Schedulers.boundedElastic() )
                     .onBackpressureDrop( c -> LOG.warn( "Cache cleaner can't keep up!" ) )
-                    .concatMap( c -> Mono.fromRunnable( this::doClean ), 0 )
+                    .concatMap( c -> Mono.fromRunnable( this::doClean )
+                            .name( METRIC_CLEANUP.name() )
+                            .tap( Micrometer.observation( observations ) ), 
+                            0 
+                    )
                     .repeat()
                     .retry()
                     .subscribe();
@@ -363,6 +447,8 @@ public class LRUGroupCache implements GroupCache {
                             email, clock.millis() 
                     ) )
                     .checkpoint( "Cache update" )
+                    .name( METRIC_UPDATE.name() )
+                    .tap( Micrometer.observation( observations ) )
                     .cache(); // Make sure it can only be executed once
             
         }
@@ -409,7 +495,9 @@ public class LRUGroupCache implements GroupCache {
                     .expand( e -> e.valid() ? Mono.empty() : e.next )
                     .last()
                     .doOnNext( e -> e.lastAccessed.set( clock.instant() ) )
-                    .<List<DirectoryGroup>>map( e -> NullnessUtil.castNonNull( e.cached ) );
+                    .<List<DirectoryGroup>>map( e -> NullnessUtil.castNonNull( e.cached ) )
+                    .name( METRIC_LOOKUPS.name() )
+                    .tap( Micrometer.observation( observations ) );
 
         }
 

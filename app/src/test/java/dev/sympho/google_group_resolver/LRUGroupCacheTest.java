@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
+import io.micrometer.observation.ObservationRegistry;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -44,7 +45,8 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 TTL_STALE, 
                 CLEANER_PERIOD, 
                 CAPACITY, 
-                clock 
+                clock,
+                ObservationRegistry.NOOP
         );
 
     }
