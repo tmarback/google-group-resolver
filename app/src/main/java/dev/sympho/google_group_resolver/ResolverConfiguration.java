@@ -74,16 +74,18 @@ public class ResolverConfiguration {
      * @param directory The directory service.
      * @param cache The group cache.
      * @param config The cache settings.
+     * @param observations The observation registry to use.
      * @return The seeder.
      */
     @Bean
     CacheSeeder seeder( 
             final DirectoryService directory, 
             final GroupCache cache, 
-            final CacheSettings config 
+            final CacheSettings config,
+            final ObservationRegistry observations 
     ) {
 
-        return new CacheSeeder( directory, cache, config.seeder() );
+        return new CacheSeeder( directory, cache, config.seeder(), observations );
 
     }
 
