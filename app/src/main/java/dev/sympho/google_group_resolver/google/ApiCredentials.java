@@ -17,6 +17,6 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties( "credentials.google" )
 public record ApiCredentials(
-        @NotBlank String delegatedEmail,
-        @NotNull Path path
+    @NotBlank String delegatedEmail,
+    @NotNull Path path
 ) {}

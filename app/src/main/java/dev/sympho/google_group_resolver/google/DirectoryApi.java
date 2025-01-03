@@ -41,8 +41,8 @@ public interface DirectoryApi {
      *                      there are no more pages.
      */
     record ListResult<V extends @NonNull Object>(
-            List<V> values,
-            @Nullable String nextPageToken
+        List<V> values,
+        @Nullable String nextPageToken
     ) implements Result {}
 
     /**
@@ -103,17 +103,17 @@ public interface DirectoryApi {
      * @see DirectoryApi#makeRequestBatch(Collection)
      */
     record GroupMembershipRequest(
-            String email,
-            @Nullable String nextPageToken,
-            Callback<ListResult<DirectoryGroup>> callback
+        String email,
+        @Nullable String nextPageToken,
+        Callback<ListResult<DirectoryGroup>> callback
     ) implements Request<ListResult<DirectoryGroup>> {
 
         @Override
         public String toString() {
 
             return "GroupMembershipRequest[email=%s, nextPageToken=%s]".formatted( 
-                    email, 
-                    Objects.requireNonNullElse( nextPageToken, "null" )
+                email, 
+                Objects.requireNonNullElse( nextPageToken, "null" )
             );
 
         }
@@ -130,15 +130,15 @@ public interface DirectoryApi {
      * @see DirectoryApi#makeRequestBatch(Collection)
      */
     record GroupListRequest(
-            @Nullable String nextPageToken,
-            Callback<ListResult<DirectoryGroup>> callback
+        @Nullable String nextPageToken,
+        Callback<ListResult<DirectoryGroup>> callback
     ) implements Request<ListResult<DirectoryGroup>> {
 
         @Override
         public String toString() {
 
             return "GroupListRequest[nextPageToken=%s]".formatted( 
-                    Objects.requireNonNullElse( nextPageToken, "null" )
+                Objects.requireNonNullElse( nextPageToken, "null" )
             );
 
         }

@@ -98,14 +98,14 @@ public class DirectoryApiClient implements DirectoryApi {
      * @throws IOException if an error occurred.
      */
     private <R extends @NonNull Result, G extends @NonNull Object> void executeRequest( 
-            final ApiRequest<R, G, ?> request 
+        final ApiRequest<R, G, ?> request 
     ) throws IOException {
 
         // var here makes Checker crash
         final DirectoryRequest<G> rawRequest = request.createRequest( client );
         final var result = Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
-                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
-                .observe( ThrowingSupplier.of( () -> rawRequest.execute() ) );
+            .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
+            .observe( ThrowingSupplier.of( () -> rawRequest.execute() ) );
         request.issueResult( result );
 
     }
@@ -121,7 +121,7 @@ public class DirectoryApiClient implements DirectoryApi {
             executeRequest( convertRequest( request ) );
         } catch ( final HttpResponseException ex ) {
             request.callback().onFailure( 
-                    new RequestFailedException( ex.getStatusCode(), ex.getMessage() ) 
+                new RequestFailedException( ex.getStatusCode(), ex.getMessage() ) 
             );
         } catch ( final Exception ex ) {
             request.callback().onError( ex );
@@ -133,8 +133,8 @@ public class DirectoryApiClient implements DirectoryApi {
     public void makeRequest( final Request<?> request ) {
 
         Observation.createNotStarted( METRIC_REQUEST.name(), observations )
-                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
-                .observe( () -> doMakeRequest( request ) );
+            .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
+            .observe( () -> doMakeRequest( request ) );
 
     }
 
@@ -148,15 +148,15 @@ public class DirectoryApiClient implements DirectoryApi {
      * @throws IOException if an error occurred.
      */
     private <R extends Result, G extends @NonNull Object> void enqueueRequest( 
-            final BatchRequest batch, 
-            final ApiRequest<R, G, ?> request 
+        final BatchRequest batch, 
+        final ApiRequest<R, G, ?> request 
     ) throws IOException {
 
         batch.queue( 
-                request.createRequest( client ).buildHttpRequest(),
-                request.dataClass(), 
-                GoogleJsonErrorContainer.class, 
-                request
+            request.createRequest( client ).buildHttpRequest(),
+            request.dataClass(), 
+            GoogleJsonErrorContainer.class, 
+            request
         );
 
     }
@@ -175,7 +175,7 @@ public class DirectoryApiClient implements DirectoryApi {
 
         if ( requests.size() > MAX_BATCH_SIZE ) {
             final var ex = new IllegalArgumentException( 
-                    "Too many requests for batch: " + requests.size() 
+                "Too many requests for batch: " + requests.size() 
             );
             requests.forEach( request -> request.callback().onError( ex ) );
             throw ex;
@@ -195,18 +195,18 @@ public class DirectoryApiClient implements DirectoryApi {
 
         try {
             Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
-                    .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
-                    .highCardinalityKeyValue( 
-                            METRIC_TAG_REQUEST_COUNT, 
-                            String.valueOf( queued.size() ) 
-                    )
-                    .observe( () -> {
-                        try {
-                            batch.execute();
-                        } catch ( final IOException ex ) {
-                            throw new RuntimeException( ex );
-                        }
-                    } );
+                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
+                .highCardinalityKeyValue( 
+                    METRIC_TAG_REQUEST_COUNT, 
+                    String.valueOf( queued.size() ) 
+                )
+                .observe( () -> {
+                    try {
+                        batch.execute();
+                    } catch ( final IOException ex ) {
+                        throw new RuntimeException( ex );
+                    }
+                } );
         } catch ( final Exception ex ) {
             queued.forEach( request -> request.callback().onError( ex ) );
         }
@@ -217,12 +217,12 @@ public class DirectoryApiClient implements DirectoryApi {
     public void makeRequestBatch( final Collection<? extends Request<?>> requests ) {
 
         Observation.createNotStarted( METRIC_REQUEST.name(), observations )
-                .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
-                .highCardinalityKeyValue( 
-                        METRIC_TAG_REQUEST_COUNT, 
-                        String.valueOf( requests.size() ) 
-                )
-                .observe( () -> doMakeRequestBatch( requests ) );
+            .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
+            .highCardinalityKeyValue( 
+                METRIC_TAG_REQUEST_COUNT, 
+                String.valueOf( requests.size() ) 
+            )
+            .observe( () -> doMakeRequestBatch( requests ) );
 
     }
 
@@ -234,10 +234,10 @@ public class DirectoryApiClient implements DirectoryApi {
      * @param <D> The API request type.
      */
     private interface ApiRequest<
-                    R extends @NonNull Result, 
-                    G extends @NonNull Object, 
-                    D extends @NonNull DirectoryRequest<G>
-            > extends BatchCallback<G, GoogleJsonErrorContainer> {
+            R extends @NonNull Result, 
+            G extends @NonNull Object, 
+            D extends @NonNull DirectoryRequest<G>
+        > extends BatchCallback<G, GoogleJsonErrorContainer> {
 
         /**
          * The underlying interface request.
@@ -287,8 +287,8 @@ public class DirectoryApiClient implements DirectoryApi {
 
         @Override
         default void onSuccess( 
-                final G result, 
-                final HttpHeaders responseHeaders 
+            final G result, 
+            final HttpHeaders responseHeaders 
         ) throws IOException {
 
             issueResult( result );
@@ -297,8 +297,8 @@ public class DirectoryApiClient implements DirectoryApi {
 
         @Override
         default void onFailure( 
-                final GoogleJsonErrorContainer error, 
-                final HttpHeaders responseHeaders 
+            final GoogleJsonErrorContainer error, 
+            final HttpHeaders responseHeaders 
         ) throws IOException {
 
             final var code = error.getError().getCode();
@@ -316,7 +316,7 @@ public class DirectoryApiClient implements DirectoryApi {
      * @param sourceRequest The underlying interface request.
      */
     private record GroupMembershipApiRequest(
-            GroupMembershipRequest sourceRequest
+        GroupMembershipRequest sourceRequest
     ) implements ApiRequest<ListResult<DirectoryGroup>, Groups, Directory.Groups.List> {
 
         @Override
@@ -328,7 +328,7 @@ public class DirectoryApiClient implements DirectoryApi {
         public List createRequest( final Directory directory ) throws IOException {
 
             var request = directory.groups().list()
-                    .setUserKey( sourceRequest.email() );
+                .setUserKey( sourceRequest.email() );
             
             final var token = sourceRequest.nextPageToken();
             if ( token != null ) {
@@ -343,12 +343,12 @@ public class DirectoryApiClient implements DirectoryApi {
         public ListResult<DirectoryGroup> parseResult( final Groups raw ) {
 
             final var groups = raw.getGroups() == null
-                    ? Stream.<DirectoryGroup>empty()
-                    : raw.getGroups().stream()
-                            .map( group -> new DirectoryGroup( 
-                                    group.getName(), 
-                                    group.getEmail() 
-                            ) );
+                ? Stream.<DirectoryGroup>empty()
+                : raw.getGroups().stream()
+                    .map( group -> new DirectoryGroup( 
+                        group.getName(), 
+                        group.getEmail() 
+                    ) );
 
             final var nextToken = raw.getNextPageToken();
             
@@ -364,7 +364,7 @@ public class DirectoryApiClient implements DirectoryApi {
      * @param sourceRequest The underlying interface request.
      */
     private record GroupListApiRequest(
-            GroupListRequest sourceRequest
+        GroupListRequest sourceRequest
     ) implements ApiRequest<ListResult<DirectoryGroup>, Groups, Directory.Groups.List> {
 
         @Override
@@ -376,7 +376,7 @@ public class DirectoryApiClient implements DirectoryApi {
         public List createRequest( final Directory directory ) throws IOException {
 
             var request = directory.groups().list()
-                    .setCustomer( "my_customer" );
+                .setCustomer( "my_customer" );
             
             final var token = sourceRequest.nextPageToken();
             if ( token != null ) {
@@ -391,12 +391,12 @@ public class DirectoryApiClient implements DirectoryApi {
         public ListResult<DirectoryGroup> parseResult( final Groups raw ) {
 
             final var groups = raw.getGroups() == null
-                    ? Stream.<DirectoryGroup>empty()
-                    : raw.getGroups().stream()
-                            .map( group -> new DirectoryGroup( 
-                                    group.getName(), 
-                                    group.getEmail() 
-                            ) );
+                ? Stream.<DirectoryGroup>empty()
+                : raw.getGroups().stream()
+                    .map( group -> new DirectoryGroup( 
+                        group.getName(), 
+                        group.getEmail() 
+                    ) );
 
             final var nextToken = raw.getNextPageToken();
             

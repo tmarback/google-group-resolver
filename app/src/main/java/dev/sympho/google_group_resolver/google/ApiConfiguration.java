@@ -27,7 +27,7 @@ public class ApiConfiguration {
 
     /** Necessary API scopes. */
     private static final Collection<String> API_SCOPES = Collections.singleton( 
-            DirectoryScopes.ADMIN_DIRECTORY_GROUP_READONLY 
+        DirectoryScopes.ADMIN_DIRECTORY_GROUP_READONLY 
     );
 
     /** Creates a new instance. */
@@ -54,8 +54,8 @@ public class ApiConfiguration {
         final GoogleCredentials credential;
         try ( var is = Files.newInputStream( creds.path() ) ) {
             credential = ServiceAccountCredentials.fromStream( is )
-                    .createScoped( API_SCOPES )
-                    .createDelegated( creds.delegatedEmail() );
+                .createScoped( API_SCOPES )
+                .createDelegated( creds.delegatedEmail() );
         }
 
         final var transport = GoogleNetHttpTransport.newTrustedTransport();
@@ -63,8 +63,8 @@ public class ApiConfiguration {
         final var initializer = new HttpCredentialsAdapter( credential );
 
         final Directory client = new Directory.Builder( transport, factory, initializer )
-                .setApplicationName( "group-resolver" )
-                .build();
+            .setApplicationName( "group-resolver" )
+            .build();
 
         return new DirectoryApiClient( client, observations );
 

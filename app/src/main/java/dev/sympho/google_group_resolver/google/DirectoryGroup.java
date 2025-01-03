@@ -7,6 +7,6 @@ package dev.sympho.google_group_resolver.google;
  * @param email The group email.
  */
 public record DirectoryGroup(
-        String name,
-        String email
+    String name,
+    String email
 ) {}
