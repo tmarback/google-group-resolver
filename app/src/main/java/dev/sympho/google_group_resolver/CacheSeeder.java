@@ -58,17 +58,17 @@ public class CacheSeeder {
      * @param observations The observation registry to use.
      */
     public CacheSeeder( 
-            final DirectoryService directory, 
-            final GroupCache cache, 
-            final SeederSettings settings,
-            final ObservationRegistry observations 
+        final DirectoryService directory, 
+        final GroupCache cache, 
+        final SeederSettings settings,
+        final ObservationRegistry observations 
     ) {
 
         this.directory = directory;
         this.cache = cache;
         this.period = settings.period();
         this.retry = RetrySpec.fixedDelay( Long.MAX_VALUE, settings.period() )
-                .transientErrors( true );
+            .transientErrors( true );
 
         this.observations = observations;
 
@@ -82,16 +82,16 @@ public class CacheSeeder {
     private Mono<Void> seedCache() {
 
         return directory.getGroups()
-                .map( DirectoryGroup::email )
-                .flatMap( email -> cache.get( email ).latest() )
-                .count()
-                .doOnSubscribe( s -> LOG.debug( "Seeding cache" ) )
-                .doOnSuccess( c -> LOG.info( "Seeded cache with {} entries", c ) )
-                .doOnError( ex -> LOG.error( "Cache seeding encountered an error", ex ) )
-                .onErrorComplete()
-                .then()
-                .name( METRIC_BASE.name() )
-                .tap( Micrometer.observation( observations ) );
+            .map( DirectoryGroup::email )
+            .flatMap( email -> cache.get( email ).latest() )
+            .count()
+            .doOnSubscribe( s -> LOG.debug( "Seeding cache" ) )
+            .doOnSuccess( c -> LOG.info( "Seeded cache with {} entries", c ) )
+            .doOnError( ex -> LOG.error( "Cache seeding encountered an error", ex ) )
+            .onErrorComplete()
+            .then()
+            .name( METRIC_BASE.name() )
+            .tap( Micrometer.observation( observations ) );
 
     }
 
@@ -116,12 +116,12 @@ public class CacheSeeder {
             LOG.info( "Starting cache seeder" );
 
             this.runner = Flux.interval( Duration.ZERO, period )
-                    .onBackpressureDrop( i -> LOG.warn( 
-                            "Previous cache seeding is still running" 
-                    ) )
-                    .concatMap( i -> seedCache(), 0 )
-                    .retryWhen( retry )
-                    .subscribe();
+                .onBackpressureDrop( i -> LOG.warn( 
+                    "Previous cache seeding is still running" 
+                ) )
+                .concatMap( i -> seedCache(), 0 )
+                .retryWhen( retry )
+                .subscribe();
 
         }
 

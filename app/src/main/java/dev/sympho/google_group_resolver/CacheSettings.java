@@ -17,12 +17,12 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param seeder The seeder configuration.
  */
 public record CacheSettings(
-        @DefaultValue( "true" ) boolean enabled,
-        @DefaultValue( "1000" ) int capacity,
-        @DefaultValue( "1m" ) Duration ttlValid,
-        @DefaultValue( "2d" ) Duration ttlStale,
-        @DefaultValue( "1m" ) Duration cleanerPeriod,
-        @Valid @DefaultValue SeederSettings seeder
+    @DefaultValue( "true" ) boolean enabled,
+    @DefaultValue( "1000" ) int capacity,
+    @DefaultValue( "1m" ) Duration ttlValid,
+    @DefaultValue( "2d" ) Duration ttlStale,
+    @DefaultValue( "1m" ) Duration cleanerPeriod,
+    @Valid @DefaultValue SeederSettings seeder
 ) {
 
     /**
@@ -31,7 +31,7 @@ public record CacheSettings(
      * @param period The period for re-seeding. Set to 0 to run only once, or negative to disable.
      */
     public record SeederSettings(
-            @DefaultValue( "1d" ) Duration period
+        @DefaultValue( "1d" ) Duration period
     ) {}
 
 }

@@ -120,13 +120,13 @@ public class LRUGroupCache implements GroupCache {
      */
     @Pure
     public LRUGroupCache( 
-            final DirectoryService directory, 
-            final Duration ttlLive, 
-            final Duration ttlStale,
-            final Duration cleanerPeriod,
-            final int capacity,
-            final Clock clock,
-            final ObservationRegistry observations
+        final DirectoryService directory, 
+        final Duration ttlLive, 
+        final Duration ttlStale,
+        final Duration cleanerPeriod,
+        final int capacity,
+        final Clock clock,
+        final ObservationRegistry observations
     ) {
 
         this.directory = Objects.requireNonNull( directory );
@@ -151,22 +151,22 @@ public class LRUGroupCache implements GroupCache {
      */
     @Pure
     public LRUGroupCache( 
-            final DirectoryService directory, 
-            final Duration ttlLive,
-            final Duration ttlStale,
-            final Duration cleanerPeriod,
-            final int capacity,
-            final ObservationRegistry observations
+        final DirectoryService directory, 
+        final Duration ttlLive,
+        final Duration ttlStale,
+        final Duration cleanerPeriod,
+        final int capacity,
+        final ObservationRegistry observations
     ) {
 
         this( 
-                directory, 
-                ttlLive, 
-                ttlStale, 
-                cleanerPeriod, 
-                capacity, 
-                Clock.systemUTC(), 
-                observations
+            directory, 
+            ttlLive, 
+            ttlStale, 
+            cleanerPeriod, 
+            capacity, 
+            Clock.systemUTC(), 
+            observations
         );
 
     }
@@ -211,11 +211,11 @@ public class LRUGroupCache implements GroupCache {
         try {
             l.lock(); // Can't allow modifications while iterating
             entries = Observation.createNotStarted( METRIC_CLEANUP_COPY.name(), observations )
-                    .highCardinalityKeyValue( 
-                            METRIC_TAG_CLEANUP_ENTRIES, 
-                            String.valueOf( cache.size() ) 
-                    )
-                    .observe( () -> List.copyOf( cache.entrySet() ) );
+                .highCardinalityKeyValue( 
+                    METRIC_TAG_CLEANUP_ENTRIES, 
+                    String.valueOf( cache.size() ) 
+                )
+                .observe( () -> List.copyOf( cache.entrySet() ) );
         } finally {
             l.unlock();
         }
@@ -229,31 +229,31 @@ public class LRUGroupCache implements GroupCache {
 
         // Remove entries that are too old
         final var observationOld = Observation.createNotStarted( 
-                METRIC_CLEANUP_OLD.name(), 
-                observations
+            METRIC_CLEANUP_OLD.name(), 
+            observations
         );
         // Checker thinks it's uninitialized for some reason?
         final @Initialized @NonNull List<Map.Entry<String, EntryImpl>> valid;
         valid = observationOld.observe( () -> {
             final var v = entries.stream()
-                    .filter( e -> {
+                .filter( e -> {
 
-                        final var entry = e.getValue();
-                        if ( !entry.expired() ) {
-                            return true;
-                        }
+                    final var entry = e.getValue();
+                    if ( !entry.expired() ) {
+                        return true;
+                    }
 
-                        cache.remove( e.getKey(), e.getValue() );
-                        return false;
+                    cache.remove( e.getKey(), e.getValue() );
+                    return false;
 
-                    } )
-                    .toList();
+                } )
+                .toList();
 
             final var removed = entries.size() - v.size();
             LOG.debug( "Removed {} expired entries", removed );
             observationOld.highCardinalityKeyValue( 
-                    METRIC_TAG_CLEANUP_ENTRIES, 
-                    String.valueOf( removed ) 
+                METRIC_TAG_CLEANUP_ENTRIES, 
+                String.valueOf( removed ) 
             );
 
             return v;
@@ -265,9 +265,9 @@ public class LRUGroupCache implements GroupCache {
             LOG.debug( "Cache size exceeded, removing {} entries", excess );
             if ( excess >= capacity ) {
                 LOG.warn( 
-                        "Cache size ({}) greatly exceeds the target ({})", 
-                        valid.size(), 
-                        capacity 
+                    "Cache size ({}) greatly exceeds the target ({})", 
+                    valid.size(), 
+                    capacity 
                 );
             }
 
@@ -278,24 +278,24 @@ public class LRUGroupCache implements GroupCache {
             // Remove entries with the oldest last-access timestamp first
             final var oldest = sorted.subList( 0, excess );
             final var observationExtra = Observation.createNotStarted( 
-                    METRIC_CLEANUP_EXTRA.name(), 
-                    observations 
+                METRIC_CLEANUP_EXTRA.name(), 
+                observations 
             );
             observationExtra.observe( () -> {
                 final var removed = oldest.stream()
-                        .filter( e -> {
-                            if ( cache.remove( e.getKey(), e.getValue() ) ) {
-                                LOG.trace( "Removed entry {}", e.getKey() );
-                                return true;
-                            } else {
-                                LOG.trace( "Entry {} was overwritten before deletion", e.getKey() );
-                                return false;
-                            }
-                        } )
-                        .count();
+                    .filter( e -> {
+                        if ( cache.remove( e.getKey(), e.getValue() ) ) {
+                            LOG.trace( "Removed entry {}", e.getKey() );
+                            return true;
+                        } else {
+                            LOG.trace( "Entry {} was overwritten before deletion", e.getKey() );
+                            return false;
+                        }
+                    } )
+                    .count();
                 observationExtra.highCardinalityKeyValue( 
-                        METRIC_TAG_CLEANUP_ENTRIES, 
-                        String.valueOf( removed ) 
+                    METRIC_TAG_CLEANUP_ENTRIES, 
+                    String.valueOf( removed ) 
                 );
             } );
         }
@@ -304,9 +304,9 @@ public class LRUGroupCache implements GroupCache {
         final var time = Duration.between( start, end );
         if ( time.compareTo( cleanerPeriod ) > 0 ) {
             LOG.warn( 
-                    "Cleanup run took {}, which is longer than the configured period of {}",
-                    time,
-                    cleanerPeriod
+                "Cleanup run took {}, which is longer than the configured period of {}",
+                time,
+                cleanerPeriod
             );
         } else {
             LOG.debug( "Cleanup run done ({})", time );
@@ -325,17 +325,17 @@ public class LRUGroupCache implements GroupCache {
             LOG.info( "Starting cache cleaner" );
             LOG.debug( "Cleaner period {}", cleanerPeriod );
             cleaner = Flux.interval( cleanerPeriod )
-                    // Task may block waiting for the lock so change schedulers
-                    .publishOn( Schedulers.boundedElastic() )
-                    .onBackpressureDrop( c -> LOG.warn( "Cache cleaner can't keep up!" ) )
-                    .concatMap( c -> Mono.fromRunnable( this::doClean )
-                            .name( METRIC_CLEANUP.name() )
-                            .tap( Micrometer.observation( observations ) ), 
-                            0 
-                    )
-                    .repeat()
-                    .retry()
-                    .subscribe();
+                // Task may block waiting for the lock so change schedulers
+                .publishOn( Schedulers.boundedElastic() )
+                .onBackpressureDrop( c -> LOG.warn( "Cache cleaner can't keep up!" ) )
+                .concatMap( c -> Mono.fromRunnable( this::doClean )
+                    .name( METRIC_CLEANUP.name() )
+                    .tap( Micrometer.observation( observations ) ), 
+                    0 
+                )
+                .repeat()
+                .retry()
+                .subscribe();
 
         }
 
@@ -386,10 +386,7 @@ public class LRUGroupCache implements GroupCache {
          * @param email The email of the entity that this entry represents.
          * @param cached The value to cache, if any.
          */
-        private EntryImpl(
-                final String email,
-                final @Nullable List<DirectoryGroup> cached
-        ) {
+        private EntryImpl( final String email, final @Nullable List<DirectoryGroup> cached ) {
 
             this.cached = cached;
 
@@ -401,55 +398,55 @@ public class LRUGroupCache implements GroupCache {
 
             // Prepare mono that updates the entry
             this.next = Flux.defer( () -> directory.getGroupsFor( email ) )
-                    .collectList()
-                    .map( groups -> new EntryImpl( email, groups ) )
-                    // Not having the explicit type makes Checker make some weird assumptions
-                    .<EntryImpl>map( entry -> {
-                        
-                        // It is technically possible, if an entry is kept in memory (which is not
-                        // recommended), for the current entry to expire and get removed and later
-                        // be replaced by a new update chain.
-                        // In that case, the most recent chain should always have priority even if 
-                        // the current entry is older, to prevent bouncing between parallel chains.
-                        // Thus, only replace the entry with the generated one if the cache slot is
-                        // empty or still occupied by this entry, otherwise consider the latest in
-                        // the new chain as the followup entry.
-                        // (Note that a descendant of this entry cannot be in the cache yet as it 
-                        // can only be generated by this mono, which is cached)
-                        // This may trigger another fetch (discarding the fetch that was just
-                        // completed) if the current latest entry is already no longer valid, but 
-                        // is necessary for long-term safety. Either way this would only happen 
-                        // with discouraged usage anyway (keeping an entry long-term).
-                        final var l = lock.readLock();
-                        final EntryImpl updated;
-                        try {
-                            l.lock();
-                            updated = cache.compute( email, 
-                                    ( e, current ) -> current == null || current == this 
-                                            ? entry 
-                                            : current
-                            );
-                        } finally {
-                            l.unlock();
-                        }
+                .collectList()
+                .map( groups -> new EntryImpl( email, groups ) )
+                // Not having the explicit type makes Checker make some weird assumptions
+                .<EntryImpl>map( entry -> {
+                    
+                    // It is technically possible, if an entry is kept in memory (which is not
+                    // recommended), for the current entry to expire and get removed and later
+                    // be replaced by a new update chain.
+                    // In that case, the most recent chain should always have priority even if 
+                    // the current entry is older, to prevent bouncing between parallel chains.
+                    // Thus, only replace the entry with the generated one if the cache slot is
+                    // empty or still occupied by this entry, otherwise consider the latest in
+                    // the new chain as the followup entry.
+                    // (Note that a descendant of this entry cannot be in the cache yet as it 
+                    // can only be generated by this mono, which is cached)
+                    // This may trigger another fetch (discarding the fetch that was just
+                    // completed) if the current latest entry is already no longer valid, but 
+                    // is necessary for long-term safety. Either way this would only happen 
+                    // with discouraged usage anyway (keeping an entry long-term).
+                    final var l = lock.readLock();
+                    final EntryImpl updated;
+                    try {
+                        l.lock();
+                        updated = cache.compute( email, 
+                            ( e, current ) -> current == null || current == this 
+                                ? entry 
+                                : current
+                        );
+                    } finally {
+                        l.unlock();
+                    }
 
-                        if ( updated == entry ) {
-                            LOG.trace( "Updated entry for {}", email );
-                        } else {
-                            LOG.warn( "Update conflict for {}", email );
-                        }
+                    if ( updated == entry ) {
+                        LOG.trace( "Updated entry for {}", email );
+                    } else {
+                        LOG.warn( "Update conflict for {}", email );
+                    }
 
-                        return updated;
+                    return updated;
 
-                    } )
-                    .doOnSubscribe( s -> LOG.trace( 
-                            "Updating entry for {} ({})", 
-                            email, clock.millis() 
-                    ) )
-                    .checkpoint( "Cache update" )
-                    .name( METRIC_UPDATE.name() )
-                    .tap( Micrometer.observation( observations ) )
-                    .cache(); // Make sure it can only be executed once
+                } )
+                .doOnSubscribe( s -> LOG.trace( 
+                    "Updating entry for {} ({})", 
+                    email, clock.millis() 
+                ) )
+                .checkpoint( "Cache update" )
+                .name( METRIC_UPDATE.name() )
+                .tap( Micrometer.observation( observations ) )
+                .cache(); // Make sure it can only be executed once
             
         }
 
@@ -492,12 +489,12 @@ public class LRUGroupCache implements GroupCache {
             // Can't shortcut the call if this entry is already valid, as it would happen
             // when this method is called rather than when the mono is subscribed to
             return Mono.just( this )
-                    .expand( e -> e.valid() ? Mono.empty() : e.next )
-                    .last()
-                    .doOnNext( e -> e.lastAccessed.set( clock.instant() ) )
-                    .<List<DirectoryGroup>>map( e -> NullnessUtil.castNonNull( e.cached ) )
-                    .name( METRIC_LOOKUPS.name() )
-                    .tap( Micrometer.observation( observations ) );
+                .expand( e -> e.valid() ? Mono.empty() : e.next )
+                .last()
+                .doOnNext( e -> e.lastAccessed.set( clock.instant() ) )
+                .<List<DirectoryGroup>>map( e -> NullnessUtil.castNonNull( e.cached ) )
+                .name( METRIC_LOOKUPS.name() )
+                .tap( Micrometer.observation( observations ) );
 
         }
 
