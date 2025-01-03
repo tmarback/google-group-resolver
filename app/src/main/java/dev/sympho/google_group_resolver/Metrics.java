@@ -30,9 +30,6 @@ public final class Metrics {
     /** Registry used to {@link #instrumentSchedulers() instrument reactor schedulers}. */
     public static final CompositeMeterRegistry SCHEDULER_REGISTRY = new CompositeMeterRegistry();
 
-    /** The tag for scheduler type. */
-    private static final String TAG_SCHEDULER_TYPE = "scheduler.type";
-
     /** Do not instantiate. */
     private Metrics() {}
 
@@ -74,8 +71,14 @@ public final class Metrics {
                 return Micrometer.timedScheduler(
                     backing, 
                     SCHEDULER_REGISTRY, 
-                    inferSimpleSchedulerName( threadFactory, type + "???" ),
-                    Tags.of( Tag.of( TAG_SCHEDULER_TYPE, type ) )
+                    "reactor",
+                    Tags.of( 
+                        Tag.of( "scheduler.type", type ),
+                        Tag.of( 
+                            "scheduler.name", 
+                            inferSimpleSchedulerName( threadFactory, type + "???" ) 
+                        )
+                    )
                 );
 
             }
