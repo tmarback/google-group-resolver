@@ -72,12 +72,12 @@ public class DirectoryServiceProviderTest {
         apiClient = DirectoryApiFixture.apiClient();
 
         iut = new DirectoryServiceProvider( 
-                apiClient, 
-                BATCH_SIZE, 
-                BATCH_TIMEOUT,
-                REQUEST_CONCURRENCY,
-                new CompositeMeterRegistry(),
-                ObservationRegistry.NOOP
+            apiClient, 
+            BATCH_SIZE, 
+            BATCH_TIMEOUT,
+            REQUEST_CONCURRENCY,
+            new CompositeMeterRegistry(),
+            ObservationRegistry.NOOP
         );
         iut.start();
 
@@ -109,8 +109,8 @@ public class DirectoryServiceProviderTest {
         private static Stream<String> testSingleOneNoPages() {
 
             return DirectoryApiFixture.GROUP_MAPPINGS.stream()
-                    .filter( e -> e.getValue().size() <= DirectoryApiMock.PAGE_SIZE )
-                    .map( Map.Entry::getKey );
+                .filter( e -> e.getValue().size() <= DirectoryApiMock.PAGE_SIZE )
+                .map( Map.Entry::getKey );
 
         }
 
@@ -127,15 +127,20 @@ public class DirectoryServiceProviderTest {
             final var groups = DirectoryApiFixture.GROUP_MAP.get( email );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
+                .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
 
             StepVerifier
-                    .withVirtualTime( () -> iut.getGroupsFor( email ).collectList(),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .assertNext( actual -> assertThat( actual )
-                            .containsExactlyInAnyOrderElementsOf( expected ) )
-                    .verifyComplete();
+                .withVirtualTime( 
+                    () -> iut.getGroupsFor( email ).collectList(),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .assertNext( actual -> assertThat( actual )
+                    .containsExactlyInAnyOrderElementsOf( expected ) 
+                )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 1 );
@@ -151,8 +156,8 @@ public class DirectoryServiceProviderTest {
         private static Stream<String> testSingleOneWithPages() {
 
             return DirectoryApiFixture.GROUP_MAPPINGS.stream()
-                    .filter( e -> e.getValue().size() > DirectoryApiMock.PAGE_SIZE )
-                    .map( Map.Entry::getKey );
+                .filter( e -> e.getValue().size() > DirectoryApiMock.PAGE_SIZE )
+                .map( Map.Entry::getKey );
 
         }
 
@@ -170,15 +175,20 @@ public class DirectoryServiceProviderTest {
             final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
+                .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
 
             StepVerifier
-                    .withVirtualTime( () -> iut.getGroupsFor( email ).collectList(),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
-                    .assertNext( actual -> assertThat( actual )
-                            .containsExactlyInAnyOrderElementsOf( expected ) )
-                    .verifyComplete();
+                .withVirtualTime( 
+                    () -> iut.getGroupsFor( email ).collectList(),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
+                .assertNext( actual -> assertThat( actual )
+                    .containsExactlyInAnyOrderElementsOf( expected ) 
+                )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( pages );
@@ -195,29 +205,30 @@ public class DirectoryServiceProviderTest {
             final var verifier = StepVerifier.withVirtualTime( () -> {
 
                 return Flux.fromIterable( DirectoryApiFixture.GROUP_MAPPINGS )
-                        .map( Map.Entry::getKey )
-                        .concatMap( email -> iut.getGroupsFor( email ).collectList() );
+                    .map( Map.Entry::getKey )
+                    .concatMap( email -> iut.getGroupsFor( email ).collectList() );
 
             }, () -> scheduler, Long.MAX_VALUE ).expectSubscription();
 
             for ( final var entry : DirectoryApiFixture.GROUP_MAPPINGS ) {
 
                 final var expected = entry.getValue().stream()
-                        .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
+                    .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
 
                 final var pages = Math.ceilDiv( expected.size(), DirectoryApiMock.PAGE_SIZE );
 
                 verifier.expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
-                        .assertNext( actual -> assertThat( actual )
-                                .containsExactlyInAnyOrderElementsOf( expected ) );
+                    .assertNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( expected ) 
+                    );
 
             }
 
             verifier.thenAwait( Duration.ofDays( 1 ) ).verifyComplete();
 
             final var totalPages = DirectoryApiFixture.GROUP_MAPPINGS.stream()
-                    .map( Map.Entry::getValue ).mapToInt( List::size )
-                    .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) ).sum();
+                .map( Map.Entry::getValue ).mapToInt( List::size )
+                .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) ).sum();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( totalPages );
@@ -235,33 +246,38 @@ public class DirectoryServiceProviderTest {
             // needed
             // to get all the pages of the largest result
             final var batches = DirectoryApiFixture.GROUP_MAPPINGS.stream()
-                    .map( Map.Entry::getValue ).mapToInt( List::size )
-                    .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) ).max().getAsInt();
+                .map( Map.Entry::getValue ).mapToInt( List::size )
+                .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) ).max().getAsInt();
 
             StepVerifier.withVirtualTime( () -> {
 
                 return Flux.fromIterable( DirectoryApiFixture.GROUP_MAP.keySet() )
-                        .flatMap( email -> Mono.zip( Mono.just( email ),
-                                iut.getGroupsFor( email ).collectList() ) )
-                        .collectMap( Tuple2::getT1, Tuple2::getT2 );
+                    .flatMap( email -> Mono.zip( Mono.just( email ),
+                        iut.getGroupsFor( email ).collectList() ) 
+                    )
+                    .collectMap( Tuple2::getT1, Tuple2::getT2 );
 
-            } ).expectSubscription().expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
-                    .assertNext( result -> {
+            } ).expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
+                .assertNext( result -> {
 
-                        assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf(
-                                DirectoryApiFixture.GROUP_MAP.keySet() );
-                        for ( final var entry : result.entrySet() ) {
+                    assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf(
+                        DirectoryApiFixture.GROUP_MAP.keySet() 
+                    );
+                    for ( final var entry : result.entrySet() ) {
 
-                            final var actual = entry.getValue();
-                            final var expected = DirectoryApiFixture.GROUP_MAP.get( entry.getKey() )
-                                    .stream().map( g -> new DirectoryGroup( g.name(), g.email() ) )
-                                    .toList();
+                        final var actual = entry.getValue();
+                        final var expected = DirectoryApiFixture.GROUP_MAP.get( entry.getKey() )
+                            .stream()
+                            .map( g -> new DirectoryGroup( g.name(), g.email() ) )
+                            .toList();
 
-                            assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
+                        assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
 
-                        }
+                    }
 
-                    } ).verifyComplete();
+                } )
+                .verifyComplete();
 
             // Can't assume specific number of batches since if one entry had more pages
             // than
@@ -279,43 +295,49 @@ public class DirectoryServiceProviderTest {
             final var batchSize = 2;
 
             final var batches = IntStream.range( 0, DirectoryApiFixture.GROUP_MAPPINGS.size() )
-                    .map( i -> {
+                .map( i -> {
 
-                        final var batch = i / batchSize;
-                        final var entry = DirectoryApiFixture.GROUP_MAPPINGS.get( i );
-                        final var groups = entry.getValue().size();
-                        final var pages = Math.ceilDiv( groups, DirectoryApiMock.PAGE_SIZE );
-                        return pages + batch;
+                    final var batch = i / batchSize;
+                    final var entry = DirectoryApiFixture.GROUP_MAPPINGS.get( i );
+                    final var groups = entry.getValue().size();
+                    final var pages = Math.ceilDiv( groups, DirectoryApiMock.PAGE_SIZE );
+                    return pages + batch;
 
-                    } ).max().getAsInt();
+                } ).max().getAsInt();
 
             StepVerifier.withVirtualTime( () -> {
 
                 return Flux.fromIterable( DirectoryApiFixture.GROUP_MAPPINGS )
-                        .map( Map.Entry::getKey ).buffer( batchSize ).delayElements( BATCH_TIMEOUT )
-                        .flatMapIterable( Function.identity() )
-                        .flatMap( email -> Mono.zip( Mono.just( email ),
-                                iut.getGroupsFor( email ).collectList() ) )
-                        .collectMap( Tuple2::getT1, Tuple2::getT2 )
-                        .doOnNext( e -> LOG.info( "All done" ) );
+                    .map( Map.Entry::getKey ).buffer( batchSize ).delayElements( BATCH_TIMEOUT )
+                    .flatMapIterable( Function.identity() )
+                    .flatMap( email -> Mono.zip( 
+                        Mono.just( email ),
+                        iut.getGroupsFor( email ).collectList() 
+                    ) )
+                    .collectMap( Tuple2::getT1, Tuple2::getT2 )
+                    .doOnNext( e -> LOG.info( "All done" ) );
 
-            } ).expectSubscription().expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
-                    .consumeNextWith( result -> {
+            } ).expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
+                .consumeNextWith( result -> {
 
-                        assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf(
-                                DirectoryApiFixture.GROUP_MAP.keySet() );
-                        for ( final var entry : result.entrySet() ) {
+                    assertThat( result.keySet() ).containsExactlyInAnyOrderElementsOf(
+                        DirectoryApiFixture.GROUP_MAP.keySet() 
+                    );
+                    for ( final var entry : result.entrySet() ) {
 
-                            final var actual = entry.getValue();
-                            final var expected = DirectoryApiFixture.GROUP_MAP.get( entry.getKey() )
-                                    .stream().map( g -> new DirectoryGroup( g.name(), g.email() ) )
-                                    .toList();
+                        final var actual = entry.getValue();
+                        final var expected = DirectoryApiFixture.GROUP_MAP.get( entry.getKey() )
+                            .stream()
+                            .map( g -> new DirectoryGroup( g.name(), g.email() ) )
+                            .toList();
 
-                            assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
+                        assertThat( actual ).containsExactlyInAnyOrderElementsOf( expected );
 
-                        }
+                    }
 
-                    } ).verifyComplete();
+                } )
+                .verifyComplete();
 
             // Can't assume specific number of batches since if one entry had more pages
             // than
@@ -350,12 +372,12 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testFailSingle() throws IOException {
 
-            StepVerifier
-                    .withVirtualTime(
-                            () -> iut.getGroupsFor( "non-existing@test.com" ).collectList(),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .verifyErrorMatches( this::verifyError );
+            StepVerifier.withVirtualTime(
+                    () -> iut.getGroupsFor( "non-existing@test.com" ).collectList(),
+                    () -> scheduler, Long.MAX_VALUE 
+                )
+                .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
+                .verifyErrorMatches( this::verifyError );
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 1 );
@@ -369,18 +391,25 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testFailBatch() throws IOException {
 
-            final var emails = List.of( "non-existing-1@test.com", "non-existing-2@test.com",
-                    "non-existing-3@test.com" );
+            final var emails = List.of( 
+                "non-existing-1@test.com", 
+                "non-existing-2@test.com",
+                "non-existing-3@test.com" 
+            );
 
-            StepVerifier
-                    .withVirtualTime(
-                            () -> Flux.fromIterable( emails ).flatMap(
-                                    email -> iut.getGroupsFor( email ).collectList().materialize() )
-                                    .filter( s -> s.isOnError() ).map( s -> s.getThrowable() ),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .expectNextMatches( this::verifyError ).expectNextMatches( this::verifyError )
-                    .expectNextMatches( this::verifyError ).verifyComplete();
+            StepVerifier.withVirtualTime(
+                    () -> Flux.fromIterable( emails )
+                        .flatMap( email -> iut.getGroupsFor( email ).collectList().materialize() )
+                        .filter( s -> s.isOnError() )
+                        .map( s -> s.getThrowable() ),
+                    () -> scheduler, Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .expectNextMatches( this::verifyError )
+                .expectNextMatches( this::verifyError )
+                .expectNextMatches( this::verifyError )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 0 );
@@ -406,8 +435,8 @@ public class DirectoryServiceProviderTest {
         private boolean verifyError( final Throwable error, final String expectedMessage ) {
 
             return DirectoryServiceProvider.ERROR_UNEXPECTED_EXCEPTION.equals( error.getMessage() )
-                    && error.getCause() != null
-                    && expectedMessage.equals( error.getCause().getMessage() );
+                && error.getCause() != null
+                && expectedMessage.equals( error.getCause().getMessage() );
 
         }
 
@@ -442,11 +471,14 @@ public class DirectoryServiceProviderTest {
         public void testGlobalErrorSingle() throws IOException {
 
             apiClient.setThrowError( true );
-            StepVerifier
-                    .withVirtualTime( () -> iut.getGroupsFor( "foo@org.com" ).collectList(),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .verifyErrorMatches( this::verifyErrorGlobal );
+            StepVerifier.withVirtualTime( 
+                    () -> iut.getGroupsFor( "foo@org.com" ).collectList(),
+                    () -> scheduler, 
+                    Long.MAX_VALUE
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .verifyErrorMatches( this::verifyErrorGlobal );
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 1 );
@@ -462,16 +494,20 @@ public class DirectoryServiceProviderTest {
 
             apiClient.setThrowError( true );
 
-            StepVerifier
-                    .withVirtualTime(
-                            () -> Flux.range( 0, 3 ).map( c -> "test" + c + "@test.com" ).flatMap(
-                                    email -> iut.getGroupsFor( email ).collectList().materialize() )
-                                    .filter( s -> s.isOnError() ).map( s -> s.getThrowable() ),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .expectNextMatches( this::verifyErrorGlobal )
-                    .expectNextMatches( this::verifyErrorGlobal )
-                    .expectNextMatches( this::verifyErrorGlobal ).verifyComplete();
+            StepVerifier.withVirtualTime(
+                    () -> Flux.range( 0, 3 )
+                        .map( c -> "test" + c + "@test.com" )
+                        .flatMap( email -> iut.getGroupsFor( email ).collectList().materialize() )
+                        .filter( s -> s.isOnError() ).map( s -> s.getThrowable() ),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .expectNextMatches( this::verifyErrorGlobal )
+                .expectNextMatches( this::verifyErrorGlobal )
+                .expectNextMatches( this::verifyErrorGlobal )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 0 );
@@ -490,27 +526,30 @@ public class DirectoryServiceProviderTest {
             final var pages = Math.ceilDiv( groups.size(), DirectoryApiMock.PAGE_SIZE );
 
             final var expected = groups.stream()
-                    .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
+                .map( g -> new DirectoryGroup( g.name(), g.email() ) ).toList();
 
             StepVerifier.withVirtualTime( () -> {
 
                 final var error = Mono.defer( () -> iut.getGroupsFor( email ).collectList() )
-                        .materialize().doOnNext( s -> {
+                    .materialize().doOnNext( s -> {
 
-                            assertThat( s.isOnError() ).isTrue();
-                            assertThat( verifyErrorGlobal( s.getThrowable() ) ).isTrue();
+                        assertThat( s.isOnError() ).isTrue();
+                        assertThat( verifyErrorGlobal( s.getThrowable() ) ).isTrue();
 
-                        } ).then().doOnSubscribe( s -> apiClient.setThrowError( true ) );
+                    } ).then().doOnSubscribe( s -> apiClient.setThrowError( true ) );
 
                 final var success = Mono.defer( () -> iut.getGroupsFor( email ).collectList() )
-                        .doOnNext( actual -> assertThat( actual )
-                                .containsExactlyInAnyOrderElementsOf( expected ) )
-                        .then().doOnSubscribe( s -> apiClient.setThrowError( false ) );
+                    .doOnNext( actual -> assertThat( actual )
+                        .containsExactlyInAnyOrderElementsOf( expected ) 
+                    )
+                    .then().doOnSubscribe( s -> apiClient.setThrowError( false ) );
 
                 return Flux.concat( error, success );
 
-            }, () -> scheduler, Long.MAX_VALUE ).expectSubscription()
-                    .expectNoEvent( BATCH_TIMEOUT.multipliedBy( 1 + pages ) ).verifyComplete();
+            }, () -> scheduler, Long.MAX_VALUE )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( 1 + pages ) )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( pages + 1 );
@@ -538,11 +577,14 @@ public class DirectoryServiceProviderTest {
         @MethodSource
         public void testQueryErrorSingle( final String email ) throws IOException {
 
-            StepVerifier
-                    .withVirtualTime( () -> iut.getGroupsFor( email ).collectList(),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .verifyErrorMatches( this::verifyErrorQuery );
+            StepVerifier.withVirtualTime( 
+                    () -> iut.getGroupsFor( email ).collectList(),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .verifyErrorMatches( this::verifyErrorQuery );
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 1 );
@@ -556,16 +598,20 @@ public class DirectoryServiceProviderTest {
         @Test
         public void testQueryErrorBatch() throws IOException {
 
-            StepVerifier
-                    .withVirtualTime(
-                            () -> Flux.fromIterable( DirectoryApiFixture.ERROR_QUERIES ).flatMap(
-                                    email -> iut.getGroupsFor( email ).collectList().materialize() )
-                                    .filter( s -> s.isOnError() ).map( s -> s.getThrowable() ),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .expectNextMatches( this::verifyErrorQuery )
-                    .expectNextMatches( this::verifyErrorQuery )
-                    .expectNextMatches( this::verifyErrorQuery ).verifyComplete();
+            StepVerifier.withVirtualTime(
+                    () -> Flux.fromIterable( DirectoryApiFixture.ERROR_QUERIES )
+                        .flatMap( email -> iut.getGroupsFor( email ).collectList().materialize() )
+                        .filter( s -> s.isOnError() )
+                        .map( s -> s.getThrowable() ),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription()
+                .expectNoEvent( BATCH_TIMEOUT )
+                .expectNextMatches( this::verifyErrorQuery )
+                .expectNextMatches( this::verifyErrorQuery )
+                .expectNextMatches( this::verifyErrorQuery )
+                .verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 0 );
@@ -580,26 +626,31 @@ public class DirectoryServiceProviderTest {
         public void testQueryErrorBatchMixed() throws IOException {
 
             final var emails = Stream.concat( DirectoryApiFixture.ERROR_QUERIES.stream(),
-                    DirectoryApiFixture.GROUP_MAP.keySet().stream() );
+                DirectoryApiFixture.GROUP_MAP.keySet().stream() 
+            );
 
             // Since everything starts on the same batch, it will take as many batches as
             // needed
             // to get all the pages of the largest result
             final var batches = DirectoryApiFixture.GROUP_MAPPINGS.stream()
-                    .map( Map.Entry::getValue ).mapToInt( List::size )
-                    .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) ).max().getAsInt();
+                .map( Map.Entry::getValue )
+                .mapToInt( List::size )
+                .map( c -> Math.ceilDiv( c, DirectoryApiMock.PAGE_SIZE ) )
+                .max().getAsInt();
 
-            StepVerifier
-                    .withVirtualTime(
-                            () -> Flux.fromStream( emails ).flatMap(
-                                    email -> iut.getGroupsFor( email ).collectList().materialize() )
-                                    .filter( s -> s.isOnError() ).map( s -> s.getThrowable() ),
-                            () -> scheduler, Long.MAX_VALUE )
-                    .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
-                    .expectNextMatches( this::verifyErrorQuery )
-                    .expectNextMatches( this::verifyErrorQuery )
-                    .expectNextMatches( this::verifyErrorQuery )
-                    .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches - 1 ) ).verifyComplete();
+            StepVerifier.withVirtualTime(
+                    () -> Flux.fromStream( emails )
+                        .flatMap( email -> iut.getGroupsFor( email ).collectList().materialize() )
+                        .filter( s -> s.isOnError() )
+                        .map( s -> s.getThrowable() ),
+                    () -> scheduler, 
+                    Long.MAX_VALUE 
+                )
+                .expectSubscription().expectNoEvent( BATCH_TIMEOUT )
+                .expectNextMatches( this::verifyErrorQuery )
+                .expectNextMatches( this::verifyErrorQuery )
+                .expectNextMatches( this::verifyErrorQuery )
+                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches - 1 ) ).verifyComplete();
 
             // Check that the expected calls were made
             assertThat( apiClient.singleCount() ).isEqualTo( 0 );
@@ -615,16 +666,22 @@ public class DirectoryServiceProviderTest {
     @Test
     public void testGroupList() {
 
-        final var pages = Math.ceilDiv( DirectoryApiFixture.GROUP_LIST.size(),
-                DirectoryApiMock.PAGE_SIZE );
+        final var pages = Math.ceilDiv( 
+            DirectoryApiFixture.GROUP_LIST.size(),
+            DirectoryApiMock.PAGE_SIZE 
+        );
 
-        StepVerifier
-                .withVirtualTime( () -> iut.getGroups().collectList(), () -> scheduler,
-                        Long.MAX_VALUE )
-                .expectSubscription().expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
-                .assertNext( actual -> assertThat( actual )
-                        .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) )
-                .verifyComplete();
+        StepVerifier.withVirtualTime( 
+                () -> iut.getGroups().collectList(), 
+                () -> scheduler,
+                Long.MAX_VALUE
+            )
+            .expectSubscription()
+            .expectNoEvent( BATCH_TIMEOUT.multipliedBy( pages ) )
+            .assertNext( actual -> assertThat( actual )
+                .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) 
+            )
+            .verifyComplete();
 
         // Check that the expected calls were made
         assertThat( apiClient.singleCount() ).isEqualTo( pages );
@@ -642,26 +699,32 @@ public class DirectoryServiceProviderTest {
         final var expected = DirectoryApiFixture.GROUP_MAP.get( email );
         final var pages = Math.ceilDiv( expected.size(), DirectoryApiMock.PAGE_SIZE );
 
-        final var listPages = Math.ceilDiv( DirectoryApiFixture.GROUP_LIST.size(),
-                DirectoryApiMock.PAGE_SIZE );
+        final var listPages = Math.ceilDiv( 
+            DirectoryApiFixture.GROUP_LIST.size(),
+            DirectoryApiMock.PAGE_SIZE 
+        );
 
         assertThat( listPages ).isGreaterThan( pages );
 
         final var batches = pages;
         final var singles = listPages - pages;
 
-        StepVerifier
-                .withVirtualTime(
-                        () -> iut.getGroups().collectList()
-                                .mergeWith( iut.getGroupsFor( email ).collectList() ),
-                        () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription().expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
-                .assertNext( actual -> assertThat( actual )
-                        .containsExactlyInAnyOrderElementsOf( expected ) )
-                .expectNoEvent( BATCH_TIMEOUT.multipliedBy( singles ) )
-                .assertNext( actual -> assertThat( actual )
-                        .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) )
-                .verifyComplete();
+        StepVerifier.withVirtualTime(
+                () -> iut.getGroups()
+                    .collectList()
+                    .mergeWith( iut.getGroupsFor( email ).collectList() ),
+                () -> scheduler, Long.MAX_VALUE 
+            )
+            .expectSubscription()
+            .expectNoEvent( BATCH_TIMEOUT.multipliedBy( batches ) )
+            .assertNext( actual -> assertThat( actual )
+                .containsExactlyInAnyOrderElementsOf( expected ) 
+            )
+            .expectNoEvent( BATCH_TIMEOUT.multipliedBy( singles ) )
+            .assertNext( actual -> assertThat( actual )
+                .containsExactlyInAnyOrderElementsOf( DirectoryApiFixture.GROUP_LIST ) 
+            )
+            .verifyComplete();
 
         // Check that the expected calls were made
         assertThat( apiClient.singleCount() ).isEqualTo( singles );

@@ -40,13 +40,13 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
     protected LRUGroupCache makeIUT() {
 
         return new LRUGroupCache( 
-                directory, 
-                TTL_VALID, 
-                TTL_STALE, 
-                CLEANER_PERIOD, 
-                CAPACITY, 
-                clock,
-                ObservationRegistry.NOOP
+            directory, 
+            TTL_VALID, 
+            TTL_STALE, 
+            CLEANER_PERIOD, 
+            CAPACITY, 
+            clock,
+            ObservationRegistry.NOOP
         );
 
     }
@@ -79,9 +79,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -89,7 +89,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         StepVerifier.withVirtualTime( () -> {
 
             Mockito.when( directory.getGroupsFor( email ) )
-                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             final var entry = iut.get( email );
 
@@ -102,31 +102,31 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                 assertThat( cachedEntry.valid() ).isTrue();
                 assertThat( cachedEntry.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( groups );
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
                 return cachedEntry.latest();
 
             } ).repeat( 2 );
 
             return entry.latest().concatWith( repeat )
-                    .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( 1 ) );
+                .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( 1 ) );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .verifyComplete();
+            .expectSubscription()
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .verifyComplete();
 
     }
 
@@ -137,21 +137,21 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
     public void testFetchManyMultiple() {
 
         final var cases = List.of(
-                Map.entry( "test-1@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "C", "c@foo.bar" )
-                ) ),
-                Map.entry( "test-2@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "D", "d@foo.bar" ), 
-                        new DirectoryGroup( "E", "e@foo.bar" )
-                ) ),
-                Map.entry( "test-3@foo.bar", List.of(
-                        new DirectoryGroup( "F", "f@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "G", "g@foo.bar" )
-                ) )
+            Map.entry( "test-1@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
+            ) ),
+            Map.entry( "test-2@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" )
+            ) ),
+            Map.entry( "test-3@foo.bar", List.of(
+                new DirectoryGroup( "F", "f@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "G", "g@foo.bar" )
+            ) )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -164,21 +164,21 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var groups = entry.getValue();
 
                 Mockito.when( directory.getGroupsFor( email ) )
-                        .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             }
 
             final var entries = cases.stream()
-                    .map( e -> {
+                .map( e -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest();
+                    return entry.latest();
 
-                    } ).toList();
+                } ).toList();
 
             final var repeat = Flux.fromIterable( cases ).concatMap( e -> {
                 
@@ -186,24 +186,24 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                 assertThat( cachedEntry.valid() ).isTrue();
                 assertThat( cachedEntry.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( e.getValue() );
+                    .containsExactlyInAnyOrderElementsOf( e.getValue() );
 
                 return cachedEntry.latest();
 
             } ).repeat( 2 );
 
             return Flux.fromIterable( entries ).flatMap( e -> e ).concatWith( repeat )
-                    .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( cases.size() ) );
+                .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( cases.size() ) );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay );
+            .expectSubscription()
+            .expectNoEvent( delay );
 
         for ( int i = 0; i < 4; i++ ) {
             for ( final var entry : cases ) {
 
                 verifier.assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
+                    .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
                 );
 
             }
@@ -222,14 +222,14 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
         final var newGroups = List.of( 
-                new DirectoryGroup( "D", "d@foo.bar" ), 
-                new DirectoryGroup( "E", "e@foo.bar" ), 
-                new DirectoryGroup( "F", "f@foo.bar" )
+            new DirectoryGroup( "D", "d@foo.bar" ), 
+            new DirectoryGroup( "E", "e@foo.bar" ), 
+            new DirectoryGroup( "F", "f@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -240,7 +240,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var groupsFlux = Flux.fromIterable( groups ).delaySubscription( delay );
             final var newGroupsFlux = Flux.fromIterable( newGroups ).delaySubscription( delay );
             Mockito.when( directory.getGroupsFor( email ) )
-                    .thenReturn( groupsFlux, groupsFlux, groupsFlux, newGroupsFlux );
+                .thenReturn( groupsFlux, groupsFlux, groupsFlux, newGroupsFlux );
 
             final var entry = iut.get( email );
 
@@ -248,43 +248,43 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             assertThat( entry.value() ).isNull();
 
             final var refresh = Mono.delay( TTL_VALID )
-                    .then( Mono.fromSupplier( () -> iut.get( email ) ) )
-                    .flatMap( e -> e.latest() );
+                .then( Mono.fromSupplier( () -> iut.get( email ) ) )
+                .flatMap( e -> e.latest() );
 
             return entry.latest()
-                    .concatWith( refresh.repeat( 2 ) )
-                    .concatWith( entry.latest()
-                            .doOnSubscribe( s -> {
-                                assertThat( entry.valid() ).isFalse();
-                                assertThat( entry.value() ).isNull();
-                            } )
-                            .delaySubscription( TTL_VALID ) 
-                    )
-                    .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( 1 ) );
+                .concatWith( refresh.repeat( 2 ) )
+                .concatWith( entry.latest()
+                    .doOnSubscribe( s -> {
+                        assertThat( entry.valid() ).isFalse();
+                        assertThat( entry.value() ).isNull();
+                    } )
+                    .delaySubscription( TTL_VALID ) 
+                )
+                .doOnComplete( () -> assertThat( iut.size() ).isEqualTo( 1 ) );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .expectNoEvent( spacing )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .expectNoEvent( spacing )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .expectNoEvent( spacing )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( newGroups ) 
-                )
-                .expectNoEvent( spacing )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( newGroups ) 
-                )
-                .verifyComplete();
+            .expectSubscription()
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .expectNoEvent( spacing )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .expectNoEvent( spacing )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .expectNoEvent( spacing )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( newGroups ) 
+            )
+            .expectNoEvent( spacing )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( newGroups ) 
+            )
+            .verifyComplete();
 
     }
 
@@ -296,25 +296,25 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
 
         final var buffer = Duration.ofMillis( 10 );
         final var untilBeforeClean = CLEANER_PERIOD
-                .minus( delay )
-                .minus( TTL_VALID )
-                .minus( TTL_STALE )
-                .minus( buffer );
+            .minus( delay )
+            .minus( TTL_VALID )
+            .minus( TTL_STALE )
+            .minus( buffer );
         final var untilAfterClean = buffer.multipliedBy( 2 );
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
         Mockito.when( directory.getGroupsFor( email ) )
-                .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
+            .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         StepVerifier.withVirtualTime( () -> {
 
@@ -324,9 +324,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             assertThat( entry.value() ).isNull();
 
             final var value = entry.latest()
-                    .doOnNext( result -> assertThat( result )
-                            .containsExactlyInAnyOrderElementsOf( groups )
-                    ).then();
+                .doOnNext( result -> assertThat( result )
+                    .containsExactlyInAnyOrderElementsOf( groups )
+                ).then();
 
             final var checkValid = Mono.fromRunnable( () -> {
                 
@@ -334,7 +334,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var entryValid = iut.get( email );
                 assertThat( entryValid.valid() ).isTrue();
                 assertThat( entryValid.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( groups );
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
             } );
 
@@ -344,7 +344,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var entryStale = iut.get( email );
                 assertThat( entryStale.valid() ).isFalse();
                 assertThat( entryStale.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( groups );
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
             } ).delaySubscription( TTL_VALID );
 
@@ -370,17 +370,17 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             } ).delaySubscription( untilAfterClean );
 
             return Flux.concat(
-                    value,
-                    checkValid,
-                    checkStale,
-                    checkExpired,
-                    checkBeforeClean,
-                    checkAfterClean
+                value,
+                checkValid,
+                checkStale,
+                checkExpired,
+                checkBeforeClean,
+                checkAfterClean
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .thenAwait( totalWait )
-                .verifyComplete();
+            .thenAwait( totalWait )
+            .verifyComplete();
 
     }
 
@@ -392,44 +392,44 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var extras = List.of(
-                Map.entry( "test-1@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "C", "c@foo.bar" )
-                ) ),
-                Map.entry( "test-2@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "D", "d@foo.bar" ), 
-                        new DirectoryGroup( "E", "e@foo.bar" )
-                ) ),
-                Map.entry( "test-3@foo.bar", List.of(
-                        new DirectoryGroup( "F", "f@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "G", "g@foo.bar" )
-                ) )
+            Map.entry( "test-1@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
+            ) ),
+            Map.entry( "test-2@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" )
+            ) ),
+            Map.entry( "test-3@foo.bar", List.of(
+                new DirectoryGroup( "F", "f@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "G", "g@foo.bar" )
+            ) )
         );
 
         final var delay = Duration.ofSeconds( 1 );
 
         final var buffer = Duration.ofMillis( 10 );
         final var untilCacheExtras = CLEANER_PERIOD
-                .minus( delay )
-                .minus( TTL_VALID )
-                .minus( TTL_STALE )
-                .minus( delay )
-                .minus( buffer );
+            .minus( delay )
+            .minus( TTL_VALID )
+            .minus( TTL_STALE )
+            .minus( delay )
+            .minus( buffer );
         final var untilAfterClean = buffer.multipliedBy( 2 );
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
         Mockito.when( directory.getGroupsFor( email ) )
-                .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
+            .thenAnswer( inv -> Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         for ( final var entry : extras ) {
 
@@ -437,7 +437,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraGroups = entry.getValue();
 
             Mockito.when( directory.getGroupsFor( extraEmail ) )
-                    .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
 
@@ -449,9 +449,9 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             assertThat( entry.value() ).isNull();
 
             final var value = entry.latest()
-                    .doOnNext( result -> assertThat( result )
-                            .containsExactlyInAnyOrderElementsOf( groups )
-                    ).then();
+                .doOnNext( result -> assertThat( result )
+                    .containsExactlyInAnyOrderElementsOf( groups )
+                ).then();
 
             final var checkValid = Mono.fromRunnable( () -> {
                 
@@ -459,7 +459,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var entryValid = iut.get( email );
                 assertThat( entryValid.valid() ).isTrue();
                 assertThat( entryValid.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( groups );
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
             } );
 
@@ -469,7 +469,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 final var entryStale = iut.get( email );
                 assertThat( entryStale.valid() ).isFalse();
                 assertThat( entryStale.value() ).isNotNull()
-                        .containsExactlyInAnyOrderElementsOf( groups );
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
             } ).delaySubscription( TTL_VALID );
 
@@ -487,10 +487,10 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
                 assertThat( iut.size() ).isEqualTo( 1 );
 
                 final var extraMonos = extras.stream()
-                        .map( Map.Entry::getKey )
-                        .map( iut::get )
-                        .map( GroupCache.Entry::latest )
-                        .toList();
+                    .map( Map.Entry::getKey )
+                    .map( iut::get )
+                    .map( GroupCache.Entry::latest )
+                    .toList();
 
                 return Mono.zip( extraMonos, r -> Mono.empty() ).then();
 
@@ -509,18 +509,18 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             } ).delaySubscription( untilAfterClean );
 
             return Flux.concat(
-                    value,
-                    checkValid,
-                    checkStale,
-                    checkExpired,
-                    cacheExtras,
-                    checkBeforeClean,
-                    checkAfterClean
+                value,
+                checkValid,
+                checkStale,
+                checkExpired,
+                cacheExtras,
+                checkBeforeClean,
+                checkAfterClean
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .thenAwait( totalWait )
-                .verifyComplete();
+            .thenAwait( totalWait )
+            .verifyComplete();
 
     }
 
@@ -532,12 +532,12 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + excess )
-                .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
-                ) ) )
-                .toList();
+            .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
+                new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
+            ) ) )
+            .toList();
 
         final var delay = Duration.ofSeconds( 1 );
 
@@ -552,7 +552,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraGroups = entry.getValue();
 
             Mockito.when( directory.getGroupsFor( extraEmail ) )
-                    .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
 
@@ -564,40 +564,40 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var initial = Mono.delay( initialDelay ).then();
 
             final var cutMonos = toCut.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var cut = Mono.zip( cutMonos, r -> Mono.empty() ).then();
 
             final var stayMonos = toStay.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var stay = Mono.zip( stayMonos, r -> Mono.empty() ).then();
 
@@ -617,7 +617,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                     assertThat( entry.valid() ).isTrue();
                     assertThat( entry.value() ).isNotNull()
-                            .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
+                        .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
 
                 } );
 
@@ -637,16 +637,16 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             } ).delaySubscription( buffer.multipliedBy( 2 ) );
 
             return Flux.concat(
-                    initial,
-                    cut,
-                    stay,
-                    checkBeforeClean,
-                    checkAfterClean
+                initial,
+                cut,
+                stay,
+                checkBeforeClean,
+                checkAfterClean
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .thenAwait( totalWait )
-                .verifyComplete();
+            .thenAwait( totalWait )
+            .verifyComplete();
 
     }
 
@@ -659,20 +659,20 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + excess )
-                .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
-                ) ) )
-                .toList();
+            .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
+                new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
+            ) ) )
+            .toList();
 
         final var delay = Duration.ofSeconds( 1 );
 
         final var buffer = Duration.ofMillis( 10 );
         final var initialDelay = CLEANER_PERIOD.minus( buffer )
-                .minus( buffer )
-                .minus( delay )
-                .minus( delay );
+            .minus( buffer )
+            .minus( delay )
+            .minus( delay );
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
@@ -682,7 +682,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraGroups = entry.getValue();
 
             Mockito.when( directory.getGroupsFor( extraEmail ) )
-                    .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
 
@@ -694,40 +694,40 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var initial = Mono.delay( initialDelay ).then();
 
             final var stayMonos = toStay.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var stay = Mono.zip( stayMonos, r -> Mono.empty() ).then();
 
             final var cutMonos = toCut.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var cut = Mono.zip( cutMonos, r -> Mono.empty() ).then();
 
@@ -741,7 +741,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                     assertThat( entry.valid() ).isTrue();
                     assertThat( entry.value() ).isNotNull()
-                            .containsExactlyInAnyOrderElementsOf( e.getValue() );
+                        .containsExactlyInAnyOrderElementsOf( e.getValue() );
 
                 } );
 
@@ -759,7 +759,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                     assertThat( entry.valid() ).isTrue();
                     assertThat( entry.value() ).isNotNull()
-                            .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
+                        .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
 
                 } );
 
@@ -779,16 +779,16 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             } ).delaySubscription( buffer.multipliedBy( 2 ) );
 
             return Flux.concat(
-                    initial,
-                    stay,
-                    cut,
-                    checkBeforeClean,
-                    checkAfterClean
+                initial,
+                stay,
+                cut,
+                checkBeforeClean,
+                checkAfterClean
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .thenAwait( totalWait )
-                .verifyComplete();
+            .thenAwait( totalWait )
+            .verifyComplete();
 
     }
 
@@ -801,18 +801,18 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         final var expired = 3;
         final var excess = 3;
         final var cases = IntStream.range( 0, CAPACITY + expired + excess )
-                .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
-                        new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
-                        new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
-                ) ) )
-                .toList();
+            .mapToObj( i -> Map.entry( "test-" + i + "@foo.bar", List.of(
+                new DirectoryGroup( "A" + i, "a" + i + "@foo.bar" ), 
+                new DirectoryGroup( "B" + i, "b" + i + "@foo.bar" ), 
+                new DirectoryGroup( "C" + i, "c" + i + "@foo.bar" )
+            ) ) )
+            .toList();
 
         final var delay = Duration.ofSeconds( 1 );
 
         final var buffer = Duration.ofMillis( 10 );
         final var expireDelay = CLEANER_PERIOD.minus( buffer )
-                .minus( delay.multipliedBy( 3 ) );
+            .minus( delay.multipliedBy( 3 ) );
 
         final var totalWait = CLEANER_PERIOD.plus( buffer );
 
@@ -822,7 +822,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var extraGroups = entry.getValue();
 
             Mockito.when( directory.getGroupsFor( extraEmail ) )
-                    .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( extraGroups ).delaySubscription( delay ) );
 
         }
 
@@ -833,60 +833,60 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
         StepVerifier.withVirtualTime( () -> {
 
             final var expireMonos = toExpire.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var expire = Mono.zip( expireMonos, r -> Mono.empty() ).then();
 
             final var cutMonos = toCut.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var cut = Mono.zip( cutMonos, r -> Mono.empty() ).then()
-                    .delaySubscription( expireDelay );
+                .delaySubscription( expireDelay );
 
             final var stayMonos = toStay.stream()
-                    .map( e -> Mono.defer( () -> {
+                .map( e -> Mono.defer( () -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest()
-                                .doOnNext( groups -> assertThat( groups )
-                                        .isNotNull()
-                                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                                );
+                    return entry.latest()
+                        .doOnNext( groups -> assertThat( groups )
+                            .isNotNull()
+                            .containsExactlyInAnyOrderElementsOf( groups ) 
+                        );
 
-                    } ) )
-                    .toList();
+                } ) )
+                .toList();
 
             final var stay = Mono.zip( stayMonos, r -> Mono.empty() ).then();
 
@@ -906,7 +906,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
                     assertThat( entry.valid() ).isTrue();
                     assertThat( entry.value() ).isNotNull()
-                            .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
+                        .containsExactlyInAnyOrderElementsOf( e.getValue() ); 
 
                 } );
 
@@ -926,16 +926,16 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             } ).delaySubscription( buffer.multipliedBy( 2 ) );
 
             return Flux.concat(
-                    expire,
-                    cut,
-                    stay,
-                    checkBeforeClean,
-                    checkAfterClean
+                expire,
+                cut,
+                stay,
+                checkBeforeClean,
+                checkAfterClean
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .thenAwait( totalWait )
-                .verifyComplete();
+            .thenAwait( totalWait )
+            .verifyComplete();
 
     }
 
@@ -948,15 +948,15 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
 
         Mockito.when( directory.getGroupsFor( email ) )
-                .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+            .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
         StepVerifier.withVirtualTime( () -> {
 
@@ -966,33 +966,33 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             assertThat( entry.value() ).isNull();
 
             return entry.latest()
-                    .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
-                    .concatWith( Mono.defer( () -> entry.latest() ) )
-                    .concatWith( Mono.defer( () -> {
+                .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
+                .concatWith( Mono.defer( () -> entry.latest() ) )
+                .concatWith( Mono.defer( () -> {
 
-                        final var e = iut.get( email );
+                    final var e = iut.get( email );
 
-                        assertThat( e.valid() ).isTrue();
-                        assertThat( e.value() ).isNotNull()
-                                .containsExactlyInAnyOrderElementsOf( groups );
+                    assertThat( e.valid() ).isTrue();
+                    assertThat( e.value() ).isNotNull()
+                        .containsExactlyInAnyOrderElementsOf( groups );
 
-                        return e.latest();
-                        
-                    } ) );
+                    return e.latest();
+                    
+                } ) );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .verifyComplete();
+            .expectSubscription()
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .verifyComplete();
 
     }
 
@@ -1002,14 +1002,14 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
         final var newGroups = List.of( 
-                new DirectoryGroup( "D", "d@foo.bar" ), 
-                new DirectoryGroup( "E", "e@foo.bar" ), 
-                new DirectoryGroup( "F", "f@foo.bar" )
+            new DirectoryGroup( "D", "d@foo.bar" ), 
+            new DirectoryGroup( "E", "e@foo.bar" ), 
+            new DirectoryGroup( "F", "f@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -1019,7 +1019,7 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             final var groupsFlux = Flux.fromIterable( groups ).delaySubscription( delay );
             final var newGroupsFlux = Flux.fromIterable( newGroups ).delaySubscription( delay );
             Mockito.when( directory.getGroupsFor( email ) )
-                    .thenReturn( groupsFlux, groupsFlux, newGroupsFlux, newGroupsFlux );
+                .thenReturn( groupsFlux, groupsFlux, newGroupsFlux, newGroupsFlux );
 
             final var entry = iut.get( email );
 
@@ -1027,61 +1027,61 @@ public class LRUGroupCacheTest extends GroupCacheTest<LRUGroupCache> {
             assertThat( entry.value() ).isNull();
 
             return entry.latest()
+                .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
+                .concatWith( 
+                    Mono.defer( () -> {
+
+                        assertThat( iut.size() ).isEqualTo( 0 );
+                        return iut.get( email ).latest();
+
+                    } )
                     .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
-                    .concatWith( 
-                            Mono.defer( () -> {
+                    .delaySubscription( CLEANER_PERIOD )
+                )
+                .concatWith( 
+                    Mono.defer( () -> {
 
-                                assertThat( iut.size() ).isEqualTo( 0 );
-                                return iut.get( email ).latest();
+                        assertThat( iut.size() ).isEqualTo( 1 );
+                        return iut.get( email ).latest();
 
-                            } )
-                            .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
-                            .delaySubscription( CLEANER_PERIOD )
-                    )
-                    .concatWith( 
-                            Mono.defer( () -> {
+                    } )
+                    .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
+                    .delaySubscription( TTL_STALE )
+                )
+                .concatWith( 
+                    Mono.defer( () -> {
 
-                                assertThat( iut.size() ).isEqualTo( 1 );
-                                return iut.get( email ).latest();
+                        assertThat( iut.size() ).isEqualTo( 1 );
+                        return entry.latest();
 
-                            } )
-                            .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
-                            .delaySubscription( TTL_STALE )
-                    )
-                    .concatWith( 
-                            Mono.defer( () -> {
-
-                                assertThat( iut.size() ).isEqualTo( 1 );
-                                return entry.latest();
-
-                            } ) 
-                            .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
-                            .delaySubscription( TTL_STALE )
-                    );
+                    } ) 
+                    .doOnSuccess( s -> assertThat( iut.size() ).isEqualTo( 1 ) )
+                    .delaySubscription( TTL_STALE )
+                );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .expectNoEvent( CLEANER_PERIOD )
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .expectNoEvent( TTL_STALE )
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( newGroups ) 
-                )
-                .expectNoEvent( TTL_STALE )
-                .expectNoEvent( delay ) // There is a fetch before detecting the updated entry
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( newGroups ) 
-                )
-                .verifyComplete();
+            .expectSubscription()
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .expectNoEvent( CLEANER_PERIOD )
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .expectNoEvent( TTL_STALE )
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( newGroups ) 
+            )
+            .expectNoEvent( TTL_STALE )
+            .expectNoEvent( delay ) // There is a fetch before detecting the updated entry
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( newGroups ) 
+            )
+            .verifyComplete();
 
     }
     

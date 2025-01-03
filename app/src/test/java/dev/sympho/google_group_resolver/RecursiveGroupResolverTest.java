@@ -166,13 +166,13 @@ public class RecursiveGroupResolverTest {
             final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
 
             StepVerifier.create( iut.getGroupsFor( email )
-                            .map( DirectoryGroup::email )
-                            .collectList() 
-                    )
-                    .assertNext( groups -> assertThat( groups ) 
-                            .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .verifyComplete();
+                    .map( DirectoryGroup::email )
+                    .collectList() 
+                )
+                .assertNext( groups -> assertThat( groups ) 
+                    .containsExactlyInAnyOrderElementsOf( expected )
+                )
+                .verifyComplete();
 
         }
 
@@ -188,13 +188,13 @@ public class RecursiveGroupResolverTest {
                 final var expected = entry.getValue();
 
                 StepVerifier.create( iut.getGroupsFor( email )
-                                .map( DirectoryGroup::email )
-                                .collectList() 
-                        )
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .verifyComplete();
+                        .map( DirectoryGroup::email )
+                        .collectList() 
+                    )
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .verifyComplete();
 
             }
 
@@ -214,13 +214,13 @@ public class RecursiveGroupResolverTest {
                     final var expected = entry.getValue();
 
                     StepVerifier.create( iut.getGroupsFor( email )
-                                    .map( DirectoryGroup::email )
-                                    .collectList() 
-                            )
-                            .assertNext( groups -> assertThat( groups ) 
-                                    .containsExactlyInAnyOrderElementsOf( expected )
-                            )
-                            .verifyComplete();
+                            .map( DirectoryGroup::email )
+                            .collectList() 
+                        )
+                        .assertNext( groups -> assertThat( groups ) 
+                            .containsExactlyInAnyOrderElementsOf( expected )
+                        )
+                        .verifyComplete();
 
                 }
             }
@@ -330,13 +330,13 @@ public class RecursiveGroupResolverTest {
         private LRUGroupCache makeCache( final DirectoryService directory, final Clock clock ) {
 
             final var cache = new LRUGroupCache( 
-                    directory,
-                    TTL_LIVE,
-                    TTL_STALE,
-                    CLEANER_PERIOD,
-                    CACHE_SIZE,
-                    clock,
-                    ObservationRegistry.NOOP
+                directory,
+                TTL_LIVE,
+                TTL_STALE,
+                CLEANER_PERIOD,
+                CACHE_SIZE,
+                clock,
+                ObservationRegistry.NOOP
             );
 
             cache.startCleaner();
@@ -431,18 +431,18 @@ public class RecursiveGroupResolverTest {
                 final var depth = DirectoryApiFixture.RESOLVED_GROUP_DEPTH.get( email );
 
                 StepVerifier.withVirtualTime(
-                                () -> iut.getGroupsFor( email )
-                                        .map( DirectoryGroup::email )
-                                        .collectList(),
-                                () -> scheduler,
-                                Long.MAX_VALUE
-                        )
-                        .expectSubscription()
-                        .expectNoEvent( DELAY.multipliedBy( 1 + depth ) )
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .verifyComplete();
+                        () -> iut.getGroupsFor( email )
+                            .map( DirectoryGroup::email )
+                            .collectList(),
+                        () -> scheduler,
+                        Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( DELAY.multipliedBy( 1 + depth ) )
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .verifyComplete();
 
             }
 
@@ -453,41 +453,39 @@ public class RecursiveGroupResolverTest {
             public void testQueryCached() {
 
                 final var verifier = StepVerifier.withVirtualTime(
-                                () -> {
-                                    
-                                    final var cache = Flux.fromIterable( 
-                                                    DirectoryApiFixture.RESOLVED_GROUP_EMAILS
-                                                            .keySet() 
-                                            )
-                                            .flatMap( email -> iut.getGroupsFor( email )
-                                                    .map( DirectoryGroup::email )
-                                                    .collectList()
-                                            );
+                        () -> {
+                            
+                            final var cache = Flux.fromIterable( 
+                                    DirectoryApiFixture.RESOLVED_GROUP_EMAILS.keySet() 
+                                )
+                                .flatMap( email -> iut.getGroupsFor( email )
+                                    .map( DirectoryGroup::email )
+                                    .collectList()
+                                );
 
-                                    final var fetch = Flux.fromIterable( 
-                                                    DirectoryApiFixture.RESOLVED_GROUP_EMAILS
-                                                            .keySet() 
-                                            )
-                                            .concatMap( email -> iut.getGroupsFor( email )
-                                                    .map( DirectoryGroup::email )
-                                                    .collectList()
-                                            );
+                            final var fetch = Flux.fromIterable( 
+                                        DirectoryApiFixture.RESOLVED_GROUP_EMAILS.keySet() 
+                                    )
+                                    .concatMap( email -> iut.getGroupsFor( email )
+                                        .map( DirectoryGroup::email )
+                                        .collectList()
+                                    );
 
-                                    return cache.thenMany( fetch );
+                            return cache.thenMany( fetch );
 
-                                },
-                                () -> scheduler,
-                                Long.MAX_VALUE
-                        )
-                        .expectSubscription()
-                        .expectNoEvent( DELAY ) // Put in cache
-                        .expectNoEvent( DELAY ); // Second one to try the non-existent groups
+                        },
+                        () -> scheduler,
+                        Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( DELAY ) // Put in cache
+                    .expectNoEvent( DELAY ); // Second one to try the non-existent groups
 
                 for ( final var expected : DirectoryApiFixture.RESOLVED_GROUP_EMAILS.values() ) {
 
                     // Should have no delay since everything is cached
                     verifier.assertNext( groups -> assertThat( groups ) 
-                            .containsExactlyInAnyOrderElementsOf( expected )
+                        .containsExactlyInAnyOrderElementsOf( expected )
                     );
 
                 }
@@ -538,32 +536,32 @@ public class RecursiveGroupResolverTest {
                 final var fetchDelay = DELAY.multipliedBy( 1 + depth );
 
                 StepVerifier.withVirtualTime(
-                                () -> {
-                                    
-                                    final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                            .map( DirectoryGroup::email )
-                                            .collectList();
+                        () -> {
+                            
+                            final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
+                                .map( DirectoryGroup::email )
+                                .collectList();
 
-                                    return Flux.concat(
-                                            fetch,
-                                            fetch.delaySubscription( TTL_LIVE )
-                                    );
+                            return Flux.concat(
+                                fetch,
+                                fetch.delaySubscription( TTL_LIVE )
+                            );
 
-                                },
-                                () -> scheduler,
-                                Long.MAX_VALUE
-                        )
-                        .expectSubscription()
-                        .expectNoEvent( fetchDelay )
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .expectNoEvent( TTL_LIVE )
-                        .expectNoEvent( fetchDelay )
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .verifyComplete();
+                        },
+                        () -> scheduler,
+                        Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( fetchDelay )
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .expectNoEvent( TTL_LIVE )
+                    .expectNoEvent( fetchDelay )
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .verifyComplete();
 
             }
 
@@ -600,32 +598,32 @@ public class RecursiveGroupResolverTest {
                 final var fetchDelay = DELAY.multipliedBy( 1 + depth );
 
                 StepVerifier.withVirtualTime(
-                                () -> {
-                                    
-                                    final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                            .map( DirectoryGroup::email )
-                                            .collectList();
+                        () -> {
+                            
+                            final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
+                                .map( DirectoryGroup::email )
+                                .collectList();
 
-                                    return Flux.concat(
-                                            fetch,
-                                            fetch.delaySubscription( TTL_LIVE )
-                                    );
+                            return Flux.concat(
+                                fetch,
+                                fetch.delaySubscription( TTL_LIVE )
+                            );
 
-                                },
-                                () -> scheduler,
-                                Long.MAX_VALUE
-                        )
-                        .expectSubscription()
-                        .expectNoEvent( fetchDelay )
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .expectNoEvent( TTL_LIVE )
-                        .expectNoEvent( DELAY ) // All cache refreshed at once with prefetch
-                        .assertNext( groups -> assertThat( groups ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .verifyComplete();
+                        },
+                        () -> scheduler,
+                        Long.MAX_VALUE
+                    )
+                    .expectSubscription()
+                    .expectNoEvent( fetchDelay )
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .expectNoEvent( TTL_LIVE )
+                    .expectNoEvent( DELAY ) // All cache refreshed at once with prefetch
+                    .assertNext( groups -> assertThat( groups ) 
+                        .containsExactlyInAnyOrderElementsOf( expected )
+                    )
+                    .verifyComplete();
 
             }
 

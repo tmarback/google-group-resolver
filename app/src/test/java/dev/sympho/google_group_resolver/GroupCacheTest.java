@@ -86,9 +86,9 @@ public abstract class GroupCacheTest<T extends GroupCache> {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
-                new DirectoryGroup( "A", "a@foo.bar" ), 
-                new DirectoryGroup( "B", "b@foo.bar" ), 
-                new DirectoryGroup( "C", "c@foo.bar" )
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -96,7 +96,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
         StepVerifier.withVirtualTime( () -> {
 
             Mockito.when( directory.getGroupsFor( email ) )
-                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+                .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             final var entry = iut.get( email );
 
@@ -104,16 +104,16 @@ public abstract class GroupCacheTest<T extends GroupCache> {
             assertThat( entry.value() ).isNull();
 
             return entry.latest().doOnSuccess( s -> assertThat( iut.size() )
-                    .isEqualTo( Math.min( 1, iut.capacity() ) ) 
+                .isEqualTo( Math.min( 1, iut.capacity() ) ) 
             );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay )
-                .assertNext( result -> assertThat( result )
-                        .containsExactlyInAnyOrderElementsOf( groups ) 
-                )
-                .verifyComplete();
+            .expectSubscription()
+            .expectNoEvent( delay )
+            .assertNext( result -> assertThat( result )
+                .containsExactlyInAnyOrderElementsOf( groups ) 
+            )
+            .verifyComplete();
 
     }
 
@@ -124,21 +124,21 @@ public abstract class GroupCacheTest<T extends GroupCache> {
     public void testFetchManyOnce() {
 
         final var cases = List.of(
-                Map.entry( "test-1@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "C", "c@foo.bar" )
-                ) ),
-                Map.entry( "test-2@foo.bar", List.of(
-                        new DirectoryGroup( "A", "a@foo.bar" ), 
-                        new DirectoryGroup( "D", "d@foo.bar" ), 
-                        new DirectoryGroup( "E", "e@foo.bar" )
-                ) ),
-                Map.entry( "test-3@foo.bar", List.of(
-                        new DirectoryGroup( "F", "f@foo.bar" ), 
-                        new DirectoryGroup( "B", "b@foo.bar" ), 
-                        new DirectoryGroup( "G", "g@foo.bar" )
-                ) )
+            Map.entry( "test-1@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
+            ) ),
+            Map.entry( "test-2@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" )
+            ) ),
+            Map.entry( "test-3@foo.bar", List.of(
+                new DirectoryGroup( "F", "f@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "G", "g@foo.bar" )
+            ) )
         );
 
         final var delay = Duration.ofSeconds( 1 );
@@ -151,35 +151,36 @@ public abstract class GroupCacheTest<T extends GroupCache> {
                 final var groups = entry.getValue();
 
                 Mockito.when( directory.getGroupsFor( email ) )
-                        .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
 
             }
 
             final var entries = cases.stream()
-                    .map( e -> {
+                .map( e -> {
 
-                        final var entry = iut.get( e.getKey() );
+                    final var entry = iut.get( e.getKey() );
 
-                        assertThat( entry.valid() ).isFalse();
-                        assertThat( entry.value() ).isNull();
+                    assertThat( entry.valid() ).isFalse();
+                    assertThat( entry.value() ).isNull();
 
-                        return entry.latest();
+                    return entry.latest();
 
-                    } ).toList();
+                } ).toList();
 
-            return Flux.fromIterable( entries ).flatMap( e -> e )
-                    .doOnComplete( () -> assertThat( iut.size() )
-                            .isEqualTo( Math.min( cases.size(), iut.capacity() ) ) 
-                    );
+            return Flux.fromIterable( entries )
+                .flatMap( e -> e )
+                .doOnComplete( () -> assertThat( iut.size() )
+                    .isEqualTo( Math.min( cases.size(), iut.capacity() ) ) 
+                );
 
         }, () -> scheduler, Long.MAX_VALUE )
-                .expectSubscription()
-                .expectNoEvent( delay );
+            .expectSubscription()
+            .expectNoEvent( delay );
 
         for ( final var entry : cases ) {
 
             verifier.assertNext( result -> assertThat( result )
-                    .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
+                .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
             );
 
         }
