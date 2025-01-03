@@ -1,12 +1,20 @@
 package dev.sympho.google_group_resolver;
 
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
+import reactor.core.observability.micrometer.Micrometer;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * Utilities for dealing with metrics.
@@ -19,8 +27,103 @@ public final class Metrics {
     /** The base metric name for the directory service component. */
     public static final MetricName DIRECTORY_BASE = APP_BASE.extend( "google", "directory" );
 
+    /** Registry used to {@link #instrumentSchedulers() instrument reactor schedulers}. */
+    public static final CompositeMeterRegistry SCHEDULER_REGISTRY = new CompositeMeterRegistry();
+
+    /** The tag for scheduler type. */
+    private static final String TAG_SCHEDULER_TYPE = "scheduler.type";
+
     /** Do not instantiate. */
     private Metrics() {}
+
+    /**
+     * Attempts to determine the name of a scheduler from the thread factory.
+     *
+     * @param threadFactory The thread factory for the scheduler.
+     * @param defaultName The default name to use if none is found.
+     * @return The inferred scheduler name.
+     */
+    // https://github.com/reactor/reactor-core/issues/3285
+    private static String inferSimpleSchedulerName( 
+            final ThreadFactory threadFactory, final String defaultName ) {
+
+        if ( !( threadFactory instanceof Supplier ) ) {
+            return defaultName;
+        }
+        final Object supplied = ( ( Supplier<?> ) threadFactory ).get();
+        if ( !( supplied instanceof String ) ) {
+            return defaultName;
+        }
+        return ( String ) supplied;
+
+    }
+
+    /**
+     * Instruments Reactor's scheduler factory using {@link #SCHEDULER_REGISTRY}.
+     */
+    public static void instrumentSchedulers() {
+
+        Schedulers.setFactory( new Schedulers.Factory() {
+
+            private Scheduler newScheduler(
+                final Scheduler backing,
+                final ThreadFactory threadFactory,
+                final String type
+            ) {
+
+                return Micrometer.timedScheduler(
+                    backing, 
+                    SCHEDULER_REGISTRY, 
+                    inferSimpleSchedulerName( threadFactory, type + "???" ),
+                    Tags.of( Tag.of( TAG_SCHEDULER_TYPE, type ) )
+                );
+
+            }
+
+            @Override
+            public Scheduler newBoundedElastic( 
+                final int threadCap, final int queuedTaskCap, 
+                final ThreadFactory threadFactory, final int ttlSeconds 
+            ) {
+
+                return newScheduler( 
+                    Schedulers.Factory.super.newBoundedElastic( 
+                        threadCap, queuedTaskCap, 
+                        threadFactory, ttlSeconds 
+                    ), 
+                    threadFactory, 
+                    "boundedElastic" 
+                );
+
+            }
+
+            @Override
+            public Scheduler newParallel( 
+                final int parallelism, final ThreadFactory threadFactory 
+            ) {
+
+                return newScheduler( 
+                    Schedulers.Factory.super.newParallel( parallelism, threadFactory ), 
+                    threadFactory, 
+                    "parallel" 
+                );
+
+            }
+
+            @Override
+            public Scheduler newSingle( final ThreadFactory threadFactory ) {
+
+                return newScheduler( 
+                    Schedulers.Factory.super.newSingle( threadFactory ), 
+                    threadFactory, 
+                    "single" 
+                );
+
+            }
+            
+        } );
+
+    }
 
     /**
      * Adds a low cardinality key value to the current observation, if one exists.

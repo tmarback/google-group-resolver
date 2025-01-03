@@ -29,6 +29,9 @@ public class Application {
         // Enable context propagation
         Hooks.enableAutomaticContextPropagation();
 
+        // Instrument reactor schedulers
+        Metrics.instrumentSchedulers();
+
         new SpringApplicationBuilder( Application.class )
             .web( WebApplicationType.REACTIVE )
             .run( args )
