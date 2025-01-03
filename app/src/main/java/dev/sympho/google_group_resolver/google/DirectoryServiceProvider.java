@@ -178,10 +178,10 @@ public class DirectoryServiceProvider implements DirectoryService {
             return;
         }
         
-        Metrics.ifObservation( observations, obs -> obs.highCardinalityKeyValue( 
-            METRIC_TAG_TASK_COUNT, 
-            String.valueOf( tasks.size() )
-        ) );
+        Metrics.addHighCardinalityKeyValue( 
+            observations, 
+            METRIC_TAG_TASK_COUNT, String.valueOf( tasks.size() )
+        );
 
         if ( tasks.size() == 1 ) {
             // Shortcut to direct call if there is only one
