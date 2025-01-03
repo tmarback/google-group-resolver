@@ -66,8 +66,8 @@ public class DirectoryApiMock implements DirectoryApi {
      * @param hangQueries Queries to hang for.
      */
     public DirectoryApiMock( 
-            final Map<String, List<DirectoryGroup>> groups,
-            final List<String> errorQueries
+        final Map<String, List<DirectoryGroup>> groups,
+        final List<String> errorQueries
     ) {
 
         this.groupMap = Collections.unmodifiableSequencedMap( new LinkedHashMap<>( groups ) );
@@ -75,17 +75,17 @@ public class DirectoryApiMock implements DirectoryApi {
 
         // Compute groups that exist but don't have their own mappings
         this.extraGroups = this.groupMap.values().stream()
-                .flatMap( gs -> gs.stream() )
-                .map( DirectoryGroup::email )
-                .filter( email -> !this.groupMap.containsKey( email ) )
-                .collect( Collectors.toSet() );
+            .flatMap( gs -> gs.stream() )
+            .map( DirectoryGroup::email )
+            .filter( email -> !this.groupMap.containsKey( email ) )
+            .collect( Collectors.toSet() );
 
         // Compute total group list
         final Set<String> seen = new HashSet<>();
         this.groupList = groupMap.values().stream()
-                .flatMap( l -> l.stream() )
-                .filter( g -> seen.add( g.email() ) )
-                .toList();
+            .flatMap( l -> l.stream() )
+            .filter( g -> seen.add( g.email() ) )
+            .toList();
 
     }
 
@@ -108,7 +108,7 @@ public class DirectoryApiMock implements DirectoryApi {
      * @throws DirectoryApi.RequestFailedException if the query failed.
      */
     private DirectoryApi.ListResult<DirectoryGroup> queryGroupMembership( 
-            final DirectoryApi.GroupMembershipRequest request 
+        final DirectoryApi.GroupMembershipRequest request 
     ) throws DirectoryApi.RequestFailedException {
 
         final String email = request.email();
@@ -151,7 +151,7 @@ public class DirectoryApiMock implements DirectoryApi {
      * @throws DirectoryApi.RequestFailedException if the query failed.
      */
     private DirectoryApi.ListResult<DirectoryGroup> queryGroupList( 
-            final DirectoryApi.GroupListRequest request 
+        final DirectoryApi.GroupListRequest request 
     ) throws DirectoryApi.RequestFailedException {
 
         final @Nullable String pageToken = request.nextPageToken();
@@ -183,8 +183,8 @@ public class DirectoryApiMock implements DirectoryApi {
      * @throws DirectoryApi.RequestFailedException if the query failed.
      */
     private <R extends DirectoryApi.Result, Q extends DirectoryApi.Request<R>> void query( 
-            final Q request,
-            final Function<Q, R> handler
+        final Q request,
+        final Function<Q, R> handler
     ) {
 
         if ( throwError ) {
