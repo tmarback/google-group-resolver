@@ -69,14 +69,14 @@ class ApplicationTests {
 
         webClient.get()
             .uri( builder -> builder.path( "/resolve" )
-                    .queryParam( "email", email )
-                    .build() 
+                .queryParam( "email", email )
+                .build() 
             )
             .exchange()
             .expectStatus().isOk()
             .expectBody( ResolveController.Response.class )
             .value( response -> assertThat( response.groups() ) 
-                    .containsExactlyInAnyOrderElementsOf( expected )
+                .containsExactlyInAnyOrderElementsOf( expected )
             );
 
     }
@@ -95,14 +95,14 @@ class ApplicationTests {
 
                 webClient.get()
                     .uri( builder -> builder.path( "/resolve" )
-                            .queryParam( "email", email )
-                            .build() 
+                        .queryParam( "email", email )
+                        .build() 
                     )
                     .exchange()
                     .expectStatus().isOk()
                     .expectBody( ResolveController.Response.class )
                     .value( response -> assertThat( response.groups() ) 
-                            .containsExactlyInAnyOrderElementsOf( expected )
+                        .containsExactlyInAnyOrderElementsOf( expected )
                     );
 
             }
@@ -160,9 +160,9 @@ class ApplicationTests {
         ServiceSettings clientSettings() {
 
             return new ServiceSettings(
-                    100, 
-                    Duration.ofMillis( 1 ),
-                    5
+                100, 
+                Duration.ofMillis( 1 ),
+                5
             );
 
         }
@@ -175,12 +175,12 @@ class ApplicationTests {
         CacheSettings cacheSettings() {
 
             return new CacheSettings(
-                    false, 
-                    1000, 
-                    Duration.ofMinutes( 1 ), 
-                    Duration.ofDays( 2 ), 
-                    Duration.ofMinutes( 1 ),
-                    new CacheSettings.SeederSettings( Duration.ofSeconds( -1 ) )
+                false, 
+                1000, 
+                Duration.ofMinutes( 1 ), 
+                Duration.ofDays( 2 ), 
+                Duration.ofMinutes( 1 ),
+                new CacheSettings.SeederSettings( Duration.ofSeconds( -1 ) )
             );
 
         }
