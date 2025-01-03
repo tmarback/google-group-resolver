@@ -19,7 +19,7 @@ import dev.sympho.google_group_resolver.google.ServiceSettings;
 @Validated
 @ConfigurationProperties( "resolver" )
 public record ResolverSettings(
-        @NestedConfigurationProperty @Valid @DefaultValue ServiceSettings directory,
-        @NestedConfigurationProperty @Valid @DefaultValue CacheSettings cache,
-        @DefaultValue( "true" ) boolean prefetch
+    @NestedConfigurationProperty @Valid @DefaultValue ServiceSettings directory,
+    @NestedConfigurationProperty @Valid @DefaultValue CacheSettings cache,
+    @DefaultValue( "true" ) boolean prefetch
 ) {}

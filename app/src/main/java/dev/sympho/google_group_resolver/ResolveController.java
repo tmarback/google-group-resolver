@@ -47,8 +47,8 @@ public class ResolveController {
 
         LOG.trace( "Requested resolution for {}", email );
         return resolver.getGroupsFor( email )
-                .collectList()
-                .map( groups -> new Response( groups ) );
+            .collectList()
+            .map( groups -> new Response( groups ) );
 
     }
     
@@ -58,7 +58,7 @@ public class ResolveController {
      * @param groups The groups that the entity is a member of.
      */
     public record Response(
-            List<DirectoryGroup> groups
+        List<DirectoryGroup> groups
     ) {}
     
 }

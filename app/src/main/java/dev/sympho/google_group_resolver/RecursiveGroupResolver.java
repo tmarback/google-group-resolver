@@ -62,9 +62,9 @@ public class RecursiveGroupResolver implements GroupResolver {
      */
     @Pure
     public RecursiveGroupResolver( 
-            final GroupCache cache, 
-            final boolean prefetch, 
-            final ObservationRegistry observations 
+        final GroupCache cache, 
+        final boolean prefetch, 
+        final ObservationRegistry observations 
     ) {
 
         this.cache = cache;
@@ -82,32 +82,30 @@ public class RecursiveGroupResolver implements GroupResolver {
      * @return The indirect groups.
      */
     private Flux<DirectoryGroup> getIndirectGroups( 
-            final String email,
-            final List<DirectoryGroup> groups, 
-            final Set<String> seen 
+        final String email,
+        final List<DirectoryGroup> groups, 
+        final Set<String> seen 
     ) {
 
         final var updatedSeen = new HashSet<>( seen );
         final var newGroups = groups.stream()
-                .map( DirectoryGroup::email )
-                .filter( updatedSeen::add )
-                .toList();
+            .map( DirectoryGroup::email )
+            .filter( updatedSeen::add )
+            .toList();
 
         final var seenArg = Collections.unmodifiableSet( updatedSeen );
         return Flux.fromIterable( newGroups ).flatMap( e -> getGroupsFor( e, seenArg )
-                .checkpoint( "Resolution (recursion)" )
-                .name( METRIC_RECURSION.name() )
-                .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
-                        observations, 
-                        METRIC_TAG_QUERY_VALUE, 
-                        e 
-                ) )
-                .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
-                        observations, 
-                        METRIC_TAG_QUERY_PARENT, 
-                        email 
-                ) )
-                .tap( Micrometer.observation( observations ) )
+            .checkpoint( "Resolution (recursion)" )
+            .name( METRIC_RECURSION.name() )
+            .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
+                observations, 
+                METRIC_TAG_QUERY_VALUE, e 
+            ) )
+            .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
+                observations, 
+                METRIC_TAG_QUERY_PARENT, email 
+            ) )
+            .tap( Micrometer.observation( observations ) )
         );
 
     }
@@ -129,15 +127,14 @@ public class RecursiveGroupResolver implements GroupResolver {
             if ( cached != null ) { // Stale but non-expired cache value, use for prefetch
                 // Don't need to wait for the prefetch to finish, just let it run in the background
                 prefetcher = getIndirectGroups( email, cached, seen )
-                        .checkpoint( "Resolution (prefetch)" )
-                        .name( METRIC_PREFETCH.name() )
-                        .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
-                                observations, 
-                                METRIC_TAG_QUERY_VALUE, 
-                                email 
-                        ) )
-                        .tap( Micrometer.observation( observations ) )
-                        .cache(); // Don't cancel the prefetch
+                    .checkpoint( "Resolution (prefetch)" )
+                    .name( METRIC_PREFETCH.name() )
+                    .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
+                        observations, 
+                        METRIC_TAG_QUERY_VALUE, email 
+                    ) )
+                    .tap( Micrometer.observation( observations ) )
+                    .cache(); // Don't cancel the prefetch
             } else {
                 prefetcher = Flux.empty();
             }
@@ -146,22 +143,21 @@ public class RecursiveGroupResolver implements GroupResolver {
         }
 
         return entry.latest()
-                .filter( g -> !g.isEmpty() ) // Skip processing nested if empty
-                .flatMapMany( groups -> Flux.fromIterable( groups )
-                        .mergeWith( getIndirectGroups( email, groups, seen ) )
-                )
-                .checkpoint( "Resolution (fetch)" )
-                .name( METRIC_QUERY.name() )
-                .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
-                        observations, 
-                        METRIC_TAG_QUERY_VALUE, 
-                        email 
-                ) )
-                .tap( Micrometer.observation( observations ) )
-                // or() so that the prefetch keeps the right context (which doesn't happen
-                // with subscribe())
-                // never() so the or() always selects the real values
-                .or( prefetcher.thenMany( Flux.never() ) );
+            .filter( g -> !g.isEmpty() ) // Skip processing nested if empty
+            .flatMapMany( groups -> Flux.fromIterable( groups )
+                .mergeWith( getIndirectGroups( email, groups, seen ) )
+            )
+            .checkpoint( "Resolution (fetch)" )
+            .name( METRIC_QUERY.name() )
+            .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
+                observations, 
+                METRIC_TAG_QUERY_VALUE, email 
+            ) )
+            .tap( Micrometer.observation( observations ) )
+            // or() so that the prefetch keeps the right context 
+            // (which doesn't happen with subscribe())
+            // never() so the or() always selects the real values
+            .or( prefetcher.thenMany( Flux.never() ) );
 
     }
 
@@ -169,15 +165,14 @@ public class RecursiveGroupResolver implements GroupResolver {
     public Flux<DirectoryGroup> getGroupsFor( final String email ) {
 
         return getGroupsFor( Objects.requireNonNull( email ), Set.of( email ) )
-                .distinct( DirectoryGroup::email ) // Don't allow duplicate emails through
-                .doOnSubscribe( s -> LOG.trace( "Resolving groups for {}", email ) )
-                .name( METRIC_MAIN.name() )
-                .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
-                        observations, 
-                        METRIC_TAG_QUERY_VALUE, 
-                        email 
-                ) )
-                .tap( Micrometer.observation( observations ) );
+            .distinct( DirectoryGroup::email ) // Don't allow duplicate emails through
+            .doOnSubscribe( s -> LOG.trace( "Resolving groups for {}", email ) )
+            .name( METRIC_MAIN.name() )
+            .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
+                observations, 
+                METRIC_TAG_QUERY_VALUE, email 
+            ) )
+            .tap( Micrometer.observation( observations ) );
 
     }
     

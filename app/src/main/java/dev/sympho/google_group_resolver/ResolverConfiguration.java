@@ -48,19 +48,19 @@ public class ResolverConfiguration {
      */
     @Bean
     GroupCache cache( 
-            final DirectoryService directory, 
-            final CacheSettings config, 
-            final ObservationRegistry observations 
+        final DirectoryService directory, 
+        final CacheSettings config, 
+        final ObservationRegistry observations 
     ) {
 
         if ( config.enabled() ) {
             return new LRUGroupCache( 
-                    directory, 
-                    config.ttlValid(), 
-                    config.ttlStale(), 
-                    config.cleanerPeriod(), 
-                    config.capacity(),
-                    observations
+                directory, 
+                config.ttlValid(), 
+                config.ttlStale(), 
+                config.cleanerPeriod(), 
+                config.capacity(),
+                observations
             );
         } else {
             return new PassthroughGroupCache( directory );
@@ -79,10 +79,10 @@ public class ResolverConfiguration {
      */
     @Bean
     CacheSeeder seeder( 
-            final DirectoryService directory, 
-            final GroupCache cache, 
-            final CacheSettings config,
-            final ObservationRegistry observations 
+        final DirectoryService directory, 
+        final GroupCache cache, 
+        final CacheSettings config,
+        final ObservationRegistry observations 
     ) {
 
         return new CacheSeeder( directory, cache, config.seeder(), observations );
@@ -99,9 +99,9 @@ public class ResolverConfiguration {
      */
     @Bean
     RecursiveGroupResolver resolver( 
-            final GroupCache cache, 
-            final ResolverSettings config,
-            final ObservationRegistry observations 
+        final GroupCache cache, 
+        final ResolverSettings config,
+        final ObservationRegistry observations 
     ) {
 
         return new RecursiveGroupResolver( cache, config.prefetch(), observations );
