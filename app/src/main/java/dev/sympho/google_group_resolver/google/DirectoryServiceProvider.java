@@ -279,15 +279,17 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         // Needs to be done on a single-threaded scheduler
         // since the sink needs serialized access
-        Mono.just( task )
-            .publishOn( taskSubmitScheduler )
-            .doOnNext( t -> LOG.trace( "Submitting task {}", t ) )
-            .map( this.taskSink::tryEmitNext )
-            // Error handling
-            .filter( result -> result != EmitResult.OK )
-            .map( result -> "Could not submit task: " + result )
-            .map( IllegalStateException::new )
-            .subscribe( task.emitter()::error );
+        taskSubmitScheduler.schedule( () -> {
+            
+            LOG.trace( "Submitting task {}", task );
+            final var result = taskSink.tryEmitNext( task );
+            if ( result != EmitResult.OK ) {
+                task.emitter().error( 
+                    new IllegalStateException( "Could not submit task: " + result ) 
+                );
+            }
+
+        } );
 
     }
 
