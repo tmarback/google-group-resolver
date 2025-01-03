@@ -1,6 +1,7 @@
 {
     "java.compile.nullAnalysis.mode": "disabled",
     "java.configuration.updateBuildConfiguration": "automatic",
+    "remote.restoreForwardedPorts": false,
     // Formatter
     "java.format.settings.url": "https://config.sympho.dev/EclipseJavaFormatters.xml",
     "java.format.settings.profile": "Personal",
