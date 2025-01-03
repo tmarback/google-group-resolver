@@ -178,7 +178,7 @@ public class DirectoryServiceProvider implements DirectoryService {
             return;
         }
         
-        Utils.ifObservation( observations, obs -> obs.highCardinalityKeyValue( 
+        Metrics.ifObservation( observations, obs -> obs.highCardinalityKeyValue( 
             METRIC_TAG_TASK_COUNT, 
             String.valueOf( tasks.size() )
         ) );

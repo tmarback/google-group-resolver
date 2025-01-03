@@ -1,16 +1,21 @@
 package dev.sympho.google_group_resolver;
 
 import java.util.concurrent.ThreadFactory;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import jakarta.validation.constraints.NotNull;
+
+import org.checkerframework.checker.interning.qual.UnknownInterned;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.scheduler.Scheduler;
@@ -129,6 +134,25 @@ public final class Metrics {
     }
 
     /**
+     * Executes operations on the current observation, if one exists.
+     *
+     * @param registry The observation registry.
+     * @param handler The handler to apply.
+     */
+    @SuppressWarnings( "tainting:argument" )
+    public static void ifObservation( 
+        final ObservationRegistry registry, 
+        final Consumer<? super @NotNull @UnknownInterned Observation> handler 
+    ) {
+    
+        final var observation = registry.getCurrentObservation();
+        if ( observation != null ) {
+            handler.accept( observation );
+        }
+    
+    }
+
+    /**
      * Adds a low cardinality key value to the current observation, if one exists.
      *
      * @param registry The observation registry in use.
@@ -141,7 +165,7 @@ public final class Metrics {
         final String tagValue
     ) {
 
-        Utils.ifObservation( 
+        Metrics.ifObservation( 
             registry, 
             observation -> observation.lowCardinalityKeyValue( tagKey, tagValue ) 
         );
@@ -161,7 +185,7 @@ public final class Metrics {
         final String tagValue
     ) {
 
-        Utils.ifObservation( 
+        Metrics.ifObservation( 
             registry, 
             observation -> observation.highCardinalityKeyValue( tagKey, tagValue ) 
         );
