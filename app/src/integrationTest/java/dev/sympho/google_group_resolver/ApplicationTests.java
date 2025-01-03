@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import dev.sympho.google_group_resolver.google.DirectoryApi;
@@ -33,7 +34,7 @@ import io.micrometer.observation.ObservationRegistry;
 @WebFluxTest
 @AutoConfigureWebTestClient( timeout = "10s" )
 @Import( { ResolverConfiguration.class, ServiceConfiguration.class } )
-@DirtiesContext // Cache state is shared so need to restart between tests
+@DirtiesContext( classMode = ClassMode.AFTER_EACH_TEST_METHOD ) // Cache state is shared so need to restart between tests
 @Execution( ExecutionMode.SAME_THREAD ) // Needed because of @DirtiesContext
 class ApplicationTests {
 
