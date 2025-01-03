@@ -118,7 +118,7 @@ public class DirectoryServiceProvider implements DirectoryService {
      * 
      * <p>It must be single-threaded, as the task sink requires serialized access.
      */
-    private final Scheduler taskSubmitScheduler = Schedulers.single();
+    private final Scheduler taskSubmitScheduler = Schedulers.newSingle( "directory-service-tasks" );
     /**
      * The scheduler used to process tasks before starting a request.
      * 
