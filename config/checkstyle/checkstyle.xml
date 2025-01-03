@@ -397,13 +397,11 @@
             - Indent case labels by one level
             - Indent code in case by one level from label
             - Indent throws clause by two levels (if on separate line)
-            - Indent array initializer by two levels (if on separate line)
+            - Indent array initializer by one level (if on separate line)
             This is the minimum, indent may be larger if necessary
           -->
         <module name="Indentation">
             <property name="throwsIndent" value="8"/>
-            <property name="arrayInitIndent" value="8"/>
-            <property name="lineWrappingIndentation" value="8"/>
         </module>
         <!-- Left curly brace must be at the end of the line -->
         <module name="LeftCurly">

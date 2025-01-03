@@ -68,16 +68,16 @@ class ApplicationTests {
         final var expected = DirectoryApiFixture.RESOLVED_GROUPS.get( email );
 
         webClient.get()
-                .uri( builder -> builder.path( "/resolve" )
-                        .queryParam( "email", email )
-                        .build() 
-                )
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody( ResolveController.Response.class )
-                .value( response -> assertThat( response.groups() ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                );
+            .uri( builder -> builder.path( "/resolve" )
+                    .queryParam( "email", email )
+                    .build() 
+            )
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody( ResolveController.Response.class )
+            .value( response -> assertThat( response.groups() ) 
+                    .containsExactlyInAnyOrderElementsOf( expected )
+            );
 
     }
 
@@ -94,16 +94,16 @@ class ApplicationTests {
                 final var expected = entry.getValue();
 
                 webClient.get()
-                        .uri( builder -> builder.path( "/resolve" )
-                                .queryParam( "email", email )
-                                .build() 
-                        )
-                        .exchange()
-                        .expectStatus().isOk()
-                        .expectBody( ResolveController.Response.class )
-                        .value( response -> assertThat( response.groups() ) 
-                                .containsExactlyInAnyOrderElementsOf( expected )
-                        );
+                    .uri( builder -> builder.path( "/resolve" )
+                            .queryParam( "email", email )
+                            .build() 
+                    )
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody( ResolveController.Response.class )
+                    .value( response -> assertThat( response.groups() ) 
+                            .containsExactlyInAnyOrderElementsOf( expected )
+                    );
 
             }
         }
