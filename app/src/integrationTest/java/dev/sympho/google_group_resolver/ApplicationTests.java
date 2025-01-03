@@ -11,6 +11,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +31,7 @@ import io.micrometer.observation.ObservationRegistry;
  * Tests for the application.
  */
 @WebFluxTest
+@AutoConfigureWebTestClient( timeout = "10s" )
 @Import( { ResolverConfiguration.class, ServiceConfiguration.class } )
 @DirtiesContext // Cache state is shared so need to restart between tests
 @Execution( ExecutionMode.SAME_THREAD ) // Needed because of @DirtiesContext
