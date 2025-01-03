@@ -33,13 +33,13 @@ public final class Utils {
      * @return The count of objects for each classifier seen.
      */
     public static <T, K> Map<K, Long> countBy( 
-            final Stream<T> values, 
-            final Function<T, K> classifier 
+        final Stream<T> values, 
+        final Function<T, K> classifier 
     ) {
 
         return values.collect( Collectors.groupingBy( 
-                classifier, 
-                Collectors.counting() 
+            classifier, 
+            Collectors.counting() 
         ) );
 
     }
@@ -54,8 +54,8 @@ public final class Utils {
      * @return The count of objects for each classifier seen.
      */
     public static <T, K> Map<K, Long> countBy( 
-            final Iterable<T> values, 
-            final Function<T, K> classifier 
+        final Iterable<T> values, 
+        final Function<T, K> classifier 
     ) {
 
         return countBy( Streams.stream( values ), classifier );
@@ -70,8 +70,8 @@ public final class Utils {
      */
     @SuppressWarnings( "tainting:argument" )
     public static void ifObservation( 
-            final ObservationRegistry registry, 
-            final Consumer<? super @NotNull @UnknownInterned Observation> handler 
+        final ObservationRegistry registry, 
+        final Consumer<? super @NotNull @UnknownInterned Observation> handler 
     ) {
 
         final var observation = registry.getCurrentObservation();

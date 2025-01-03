@@ -30,9 +30,9 @@ public class Application {
         Hooks.enableAutomaticContextPropagation();
 
         new SpringApplicationBuilder( Application.class )
-                .web( WebApplicationType.REACTIVE )
-                .run( args )
-                .registerShutdownHook();
+            .web( WebApplicationType.REACTIVE )
+            .run( args )
+            .registerShutdownHook();
 
     }
 

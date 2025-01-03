@@ -30,14 +30,14 @@ public final class Metrics {
      * @param tagValue The value.
      */
     public static void addLowCardinalityKeyValue( 
-            final ObservationRegistry registry,
-            final String tagKey, 
-            final String tagValue
+        final ObservationRegistry registry,
+        final String tagKey, 
+        final String tagValue
     ) {
 
         Utils.ifObservation( 
-                registry, 
-                observation -> observation.lowCardinalityKeyValue( tagKey, tagValue ) 
+            registry, 
+            observation -> observation.lowCardinalityKeyValue( tagKey, tagValue ) 
         );
 
     }
@@ -50,14 +50,14 @@ public final class Metrics {
      * @param tagValue The value.
      */
     public static void addHighCardinalityKeyValue( 
-            final ObservationRegistry registry,
-            final String tagKey, 
-            final String tagValue
+        final ObservationRegistry registry,
+        final String tagKey, 
+        final String tagValue
     ) {
 
         Utils.ifObservation( 
-                registry, 
-                observation -> observation.highCardinalityKeyValue( tagKey, tagValue ) 
+            registry, 
+            observation -> observation.highCardinalityKeyValue( tagKey, tagValue ) 
         );
 
     }
@@ -74,8 +74,8 @@ public final class Metrics {
     public static String extendName( final String base, final String... names ) {
 
         return Stream.concat( 
-                Stream.of( base ), 
-                Stream.of( names ) 
+            Stream.of( base ), 
+            Stream.of( names ) 
         ).collect( Collectors.joining( "." ) ).intern();
 
     }
@@ -86,7 +86,7 @@ public final class Metrics {
      * @param name The name.
      */
     public record MetricName(
-            String name
+        String name
     ) {
 
         /**
