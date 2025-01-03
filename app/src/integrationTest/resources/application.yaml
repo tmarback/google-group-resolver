@@ -1,0 +1,2 @@
+logging.level:
+  "[dev.sympho.google_group_resolver]": DEBUG
