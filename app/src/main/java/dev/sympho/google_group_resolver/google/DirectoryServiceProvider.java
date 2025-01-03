@@ -73,7 +73,7 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     /** Error message used when an unexpected exception is thrown. */
     static final String ERROR_UNEXPECTED_EXCEPTION = 
-            "An unexpected error was encountered while fetching groups";
+        "An unexpected error was encountered while fetching groups";
 
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger( DirectoryServiceProvider.class );
@@ -98,8 +98,8 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     /** The sink used to issue tasks. */
     private final Sinks.Many<Task<?>> taskSink = Sinks.many()
-            .multicast()
-            .onBackpressureBuffer( TASK_INITIAL_BUFFER_SIZE, false );
+        .multicast()
+        .onBackpressureBuffer( TASK_INITIAL_BUFFER_SIZE, false );
 
     /**
      * The scheduler used to handle API requests.
@@ -148,12 +148,12 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param observations The observation registry to use.
      */
     public DirectoryServiceProvider( 
-            final DirectoryApi client,
-            final int batchSize,
-            final Duration batchTimeout,
-            final int requestConcurrency,
-            final MeterRegistry meters,
-            final ObservationRegistry observations
+        final DirectoryApi client,
+        final int batchSize,
+        final Duration batchTimeout,
+        final int requestConcurrency,
+        final MeterRegistry meters,
+        final ObservationRegistry observations
     ) {
 
         this.client = client;
@@ -179,8 +179,8 @@ public class DirectoryServiceProvider implements DirectoryService {
         }
         
         Utils.ifObservation( observations, obs -> obs.highCardinalityKeyValue( 
-                METRIC_TAG_TASK_COUNT, 
-                String.valueOf( tasks.size() )
+            METRIC_TAG_TASK_COUNT, 
+            String.valueOf( tasks.size() )
         ) );
 
         if ( tasks.size() == 1 ) {
@@ -194,8 +194,8 @@ public class DirectoryServiceProvider implements DirectoryService {
             // Checker is just being weird
             @SuppressWarnings( { "nullness:return", "signedness:return" } ) 
             final var requests = tasks.stream()
-                    .map( t -> t.toRequest() )
-                    .toList();
+                .map( t -> t.toRequest() )
+                .toList();
             client.makeRequestBatch( requests );
             LOG.trace( "Batch request done ({})", tasks.size() );
         }
@@ -211,49 +211,47 @@ public class DirectoryServiceProvider implements DirectoryService {
         if ( this.running == null ) {
             LOG.info( "Starting directory API client" );
             this.running = taskSink.asFlux()
-                    .publishOn( taskProcessScheduler )
-                    .doOnNext( t -> LOG.trace( "Task {} received", t ) )
-                    .onBackpressureBuffer( 
-                        TASK_BUFFER_SIZE, 
-                        task -> {
-                            Counter.builder( METRIC_DROPPED.name() )
-                                    .description( 
-                                            "Amount of tags dropped due to lack of backpressure"
-                                    )
-                                    .tag( METRIC_TAG_TASK_TYPE, task.tag() )
-                                    .register( meters )
-                                    .increment();
-                            // Signal error on any dropped tasks
-                            task.emitter().error( new IllegalStateException(
-                                    "Directory API task buffer overflow"
-                            ) );
-                        }, 
-                        // Don't kill the stream on backpressure issues
-                        // Drop oldest since it has a higher chance of being near a timeout anyway
-                        BufferOverflowStrategy.DROP_OLDEST 
+                .publishOn( taskProcessScheduler )
+                .doOnNext( t -> LOG.trace( "Task {} received", t ) )
+                .onBackpressureBuffer( 
+                    TASK_BUFFER_SIZE, 
+                    task -> {
+                        Counter.builder( METRIC_DROPPED.name() )
+                            .description( "Amount of tags dropped due to lack of backpressure" )
+                            .tag( METRIC_TAG_TASK_TYPE, task.tag() )
+                            .register( meters )
+                            .increment();
+                        // Signal error on any dropped tasks
+                        task.emitter().error( new IllegalStateException(
+                            "Directory API task buffer overflow"
+                        ) );
+                    }, 
+                    // Don't kill the stream on backpressure issues
+                    // Drop oldest since it has a higher chance of being near a timeout anyway
+                    BufferOverflowStrategy.DROP_OLDEST 
+                )
+                .bufferTimeout( batchSize, batchTimeout, true )
+                .doOnNext( ts -> LOG.trace(
+                    "Issuing batch with {} tasks",
+                    ts.size()
+                ) )
+                .doOnNext( ts -> Utils.countBy( ts, Task::tag )
+                    .forEach( ( tag, count ) -> Counter.builder( METRIC_ISSUED.name() )
+                        .description( "Amount of tasks issued for execution" )
+                        .tag( METRIC_TAG_TASK_TYPE, tag )
+                        .register( meters )
+                        .increment( count ) 
                     )
-                    .bufferTimeout( batchSize, batchTimeout, true )
-                    .doOnNext( ts -> LOG.trace(
-                            "Issuing batch with {} tasks",
-                            ts.size()
-                    ) )
-                    .doOnNext( ts -> Utils.countBy( ts, Task::tag )
-                            .forEach( ( tag, count ) -> Counter.builder( METRIC_ISSUED.name() )
-                                    .description( "Amount of tasks issued for execution" )
-                                    .tag( METRIC_TAG_TASK_TYPE, tag )
-                                    .register( meters )
-                                    .increment( count ) 
-                            )
-                    )
-                    .flatMap( tasks -> Mono.fromRunnable( () -> doTasks( tasks ) )
-                            .name( METRIC_BATCH.name() )
-                            .tap( Micrometer.metrics( meters ) )
-                            .tap( Micrometer.observation( observations ) )
-                            .subscribeOn( requestScheduler ),
-                            requestConcurrency
-                    )
-                    .repeat()
-                    .subscribe();
+                )
+                .flatMap( tasks -> Mono.fromRunnable( () -> doTasks( tasks ) )
+                    .name( METRIC_BATCH.name() )
+                    .tap( Micrometer.metrics( meters ) )
+                    .tap( Micrometer.observation( observations ) )
+                    .subscribeOn( requestScheduler ),
+                    requestConcurrency
+                )
+                .repeat()
+                .subscribe();
         }
 
     }
@@ -282,14 +280,14 @@ public class DirectoryServiceProvider implements DirectoryService {
         // Needs to be done on a single-threaded scheduler
         // since the sink needs serialized access
         Mono.just( task )
-                .publishOn( taskSubmitScheduler )
-                .doOnNext( t -> LOG.trace( "Submitting task {}", t ) )
-                .map( this.taskSink::tryEmitNext )
-                // Error handling
-                .filter( result -> result != EmitResult.OK )
-                .map( result -> "Could not submit task: " + result )
-                .map( IllegalStateException::new )
-                .subscribe( task.emitter()::error );
+            .publishOn( taskSubmitScheduler )
+            .doOnNext( t -> LOG.trace( "Submitting task {}", t ) )
+            .map( this.taskSink::tryEmitNext )
+            // Error handling
+            .filter( result -> result != EmitResult.OK )
+            .map( result -> "Could not submit task: " + result )
+            .map( IllegalStateException::new )
+            .subscribe( task.emitter()::error );
 
     }
 
@@ -302,19 +300,17 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @return The task results.
      */
     private <V extends @NonNull Object> Flux<V> submitTask( 
-            final Function<FluxSink<V>, Task<V>> taskFactory,
-            final String taskTag
+        final Function<FluxSink<V>, Task<V>> taskFactory,
+        final String taskTag
     ) {
 
-        return Flux.<V>push( emitter -> submitTask( 
-                        taskFactory.apply( emitter ) 
-                ) )
-                .publishOn( responseScheduler )
-                .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
-                .name( METRIC_TASKS.name() )
-                .tag( METRIC_TAG_TASK_TYPE, taskTag )
-                .tap( Micrometer.metrics( meters ) )
-                .tap( Micrometer.observation( observations ) );
+        return Flux.<V>push( emitter -> submitTask( taskFactory.apply( emitter ) ) )
+            .publishOn( responseScheduler )
+            .timeout( RESULT_TIMEOUT ) // Timeout in case somehow the task gets lost
+            .name( METRIC_TASKS.name() )
+            .tag( METRIC_TAG_TASK_TYPE, taskTag )
+            .tap( Micrometer.metrics( meters ) )
+            .tap( Micrometer.observation( observations ) );
 
     }
 
@@ -323,10 +319,10 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         // Submit group fetch as a task
         return this.<DirectoryGroup>submitTask( 
-                        emitter -> new GroupMembershipTask( this, email, emitter, null ),
-                        GroupMembershipTask.TAG
-                )
-                .checkpoint( "Get group memberships" );
+                emitter -> new GroupMembershipTask( this, email, emitter, null ),
+                GroupMembershipTask.TAG
+            )
+            .checkpoint( "Get group memberships" );
 
     }
 
@@ -335,10 +331,10 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         // Submit group fetch as a task
         return this.<DirectoryGroup>submitTask( 
-                        emitter -> new GroupListTask( this, emitter, null ),
-                        GroupListTask.TAG
-                )
-                .checkpoint( "Get group list" );
+                emitter -> new GroupListTask( this, emitter, null ),
+                GroupListTask.TAG
+            )
+            .checkpoint( "Get group list" );
 
     }
 
@@ -452,10 +448,10 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param pageToken The token to use for fetching the next page of results, if any.
      */
     private record GroupMembershipTask(
-            DirectoryServiceProvider provider,
-            String email,
-            FluxSink<DirectoryGroup> emitter,
-            @Nullable String pageToken
+        DirectoryServiceProvider provider,
+        String email,
+        FluxSink<DirectoryGroup> emitter,
+        @Nullable String pageToken
     ) implements Task<DirectoryGroup> {
 
         /** The request tag. */
@@ -486,8 +482,8 @@ public class DirectoryServiceProvider implements DirectoryService {
         public String toString() {
 
             return "GroupMembershipTask[email=%s, pageToken=%s]".formatted( 
-                    email, 
-                    Objects.requireNonNullElse( pageToken, "null" ) 
+                email, 
+                Objects.requireNonNullElse( pageToken, "null" ) 
             );
 
         }
@@ -502,9 +498,9 @@ public class DirectoryServiceProvider implements DirectoryService {
      * @param pageToken The token to use for fetching the next page of results, if any.
      */
     private record GroupListTask(
-            DirectoryServiceProvider provider,
-            FluxSink<DirectoryGroup> emitter,
-            @Nullable String pageToken
+        DirectoryServiceProvider provider,
+        FluxSink<DirectoryGroup> emitter,
+        @Nullable String pageToken
     ) implements Task<DirectoryGroup> {
 
         /** The request tag. */
@@ -535,7 +531,7 @@ public class DirectoryServiceProvider implements DirectoryService {
         public String toString() {
 
             return "GroupListTask[pageToken=%s]".formatted( 
-                    Objects.requireNonNullElse( pageToken, "null" ) 
+                Objects.requireNonNullElse( pageToken, "null" ) 
             );
 
         }

@@ -26,19 +26,19 @@ public class ServiceConfiguration {
      */
     @Bean
     DirectoryServiceProvider directory( 
-            final DirectoryApi client, 
-            final ServiceSettings config, 
-            final MeterRegistry meters,
-            final ObservationRegistry observations
+        final DirectoryApi client, 
+        final ServiceSettings config, 
+        final MeterRegistry meters,
+        final ObservationRegistry observations
     ) {
 
         return new DirectoryServiceProvider(
-                client, 
-                config.batchSize(), 
-                config.batchTimeout(),
-                config.requestConcurrency(),
-                meters,
-                observations
+            client, 
+            config.batchSize(), 
+            config.batchTimeout(),
+            config.requestConcurrency(),
+            meters,
+            observations
         );
 
     }
