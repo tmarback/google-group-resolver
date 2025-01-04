@@ -34,7 +34,8 @@ import io.micrometer.observation.ObservationRegistry;
 @WebFluxTest
 @AutoConfigureWebTestClient( timeout = "10s" )
 @Import( { ResolverConfiguration.class, ServiceConfiguration.class } )
-@DirtiesContext( classMode = ClassMode.AFTER_EACH_TEST_METHOD ) // Cache state is shared so need to restart between tests
+// Cache state is shared so need to restart between tests
+@DirtiesContext( classMode = ClassMode.AFTER_EACH_TEST_METHOD ) 
 @Execution( ExecutionMode.SAME_THREAD ) // Needed because of @DirtiesContext
 class ApplicationTests {
 

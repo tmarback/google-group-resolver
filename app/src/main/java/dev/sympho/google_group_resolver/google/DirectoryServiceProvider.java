@@ -130,7 +130,7 @@ public class DirectoryServiceProvider implements DirectoryService {
     /**
      * The scheduler used to process task batches.
      * 
-     * Necessary because the {@link Flux#bufferTimeout(int, Duration)} operator has concurrency
+     * <p>Necessary because the {@link Flux#bufferTimeout(int, Duration)} operator has concurrency
      * issues that cause it to get stuck.
      */
     private final Scheduler batchScheduler = Schedulers.newSingle( "directory-service-batch" );
