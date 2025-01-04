@@ -127,6 +127,14 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private final Scheduler taskProcessScheduler = Schedulers.parallel();
 
+    /**
+     * The scheduler used to process task batches.
+     * 
+     * Necessary because the {@link Flux#bufferTimeout(int, Duration)} operator has concurrency
+     * issues that cause it to get stuck.
+     */
+    private final Scheduler batchScheduler = Schedulers.newSingle( "directory-service-batch" );
+
     /** The meter registry in use. */
     private final MeterRegistry meters;
 
@@ -230,7 +238,8 @@ public class DirectoryServiceProvider implements DirectoryService {
                     // Drop oldest since it has a higher chance of being near a timeout anyway
                     BufferOverflowStrategy.DROP_OLDEST 
                 )
-                .bufferTimeout( batchSize, batchTimeout, true )
+                .publishOn( batchScheduler, batchSize )
+                .bufferTimeout( batchSize, batchTimeout, batchScheduler, true )
                 .doOnNext( ts -> LOG.trace(
                     "Issuing batch with {} tasks",
                     ts.size()
