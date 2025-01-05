@@ -123,14 +123,6 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private final Scheduler responseScheduler = Schedulers.parallel();
     /**
-     * The scheduler used to process tasks before starting a request.
-     * 
-     * <p>Mainly to free up {@link #taskSubmitScheduler} once serialized access
-     * is no longer necessary.
-     */
-    private final Scheduler taskProcessScheduler = Schedulers.parallel();
-
-    /**
      * The scheduler used to process task batches.
      * 
      * <p>Necessary because the {@link Flux#bufferTimeout(int, Duration)} operator has concurrency
@@ -230,7 +222,6 @@ public class DirectoryServiceProvider implements DirectoryService {
         if ( this.running == null ) {
             LOG.info( "Starting directory API client" );
             this.running = taskSink.asFlux()
-                .publishOn( taskProcessScheduler )
                 .doOnNext( t -> LOG.trace( "Task {} received", t ) )
                 .onBackpressureBuffer( 
                     TASK_BUFFER_SIZE, 
