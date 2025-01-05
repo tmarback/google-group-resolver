@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param requestConcurrency The maximum number of concurrent inflight requests.
  */
 public record ServiceSettings(
-    @DefaultValue( "100" ) @Min( 1 ) int batchSize,
+    @DefaultValue( "3" ) @Min( 1 ) int batchSize,
     @DefaultValue( "1ms" ) Duration batchTimeout,
-    @DefaultValue( "5" ) @Min( 1 ) int requestConcurrency
+    @DefaultValue( "3" ) @Min( 1 ) int requestConcurrency
 ) {}
