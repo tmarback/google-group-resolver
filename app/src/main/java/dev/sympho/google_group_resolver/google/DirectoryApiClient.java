@@ -1,6 +1,7 @@
 package dev.sympho.google_group_resolver.google;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.stream.Stream;
 
@@ -17,9 +18,13 @@ import com.google.api.services.directory.model.Groups;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.function.ThrowingSupplier;
 
 import dev.sympho.google_group_resolver.Metrics;
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 
@@ -53,11 +58,23 @@ public class DirectoryApiClient implements DirectoryApi {
     /** Metric name for request execution. */
     public static final Metrics.MetricName METRIC_EXECUTE = METRIC_REQUEST.extend( "execute" );
 
+    /** The logger. */
+    private static final Logger LOG = LoggerFactory.getLogger( DirectoryApiClient.class );
+
+    /** How many requests per period are allowed. */
+    private static final int RATE_LIMIT_AMOUNT = 2400;
+
+    /** Rate limit period. */
+    private static final Duration RATE_LIMIT_PERIOD = Duration.ofMinutes( 1 );
+
     /** The API client. */
     private final Directory client;
 
     /** The observation registry in use. */
     private final ObservationRegistry observations;
+
+    /** Rate limiter to manage API access rate. */
+    private final RateLimiter rateLimiter;
 
     /**
      * Creates a new instance.
@@ -69,6 +86,13 @@ public class DirectoryApiClient implements DirectoryApi {
 
         this.client = client;
         this.observations = observations;
+
+        this.rateLimiter = RateLimiter.of( METRIC_BASE.name(), RateLimiterConfig.custom()
+            .limitForPeriod( RATE_LIMIT_AMOUNT )
+            .limitRefreshPeriod( RATE_LIMIT_PERIOD )
+            .timeoutDuration( Duration.ofSeconds( 1 ) )
+            .build() 
+        );
 
     }
 
@@ -103,9 +127,13 @@ public class DirectoryApiClient implements DirectoryApi {
 
         // var here makes Checker crash
         final DirectoryRequest<G> rawRequest = request.createRequest( client );
+        LOG.trace( "Executing standalone request" );
         final var result = Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
             .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_SINGLE )
-            .observe( ThrowingSupplier.of( () -> rawRequest.execute() ) );
+            .observe( RateLimiter.decorateSupplier( rateLimiter, 
+                ThrowingSupplier.of( () -> rawRequest.execute() ) 
+            ) );
+        LOG.trace( "Standalone request completed" );
         request.issueResult( result );
 
     }
@@ -194,19 +222,21 @@ public class DirectoryApiClient implements DirectoryApi {
         } ).toList();
 
         try {
+            LOG.trace( "Executing batch request" );
             Observation.createNotStarted( METRIC_EXECUTE.name(), observations )
                 .lowCardinalityKeyValue( METRIC_TAG_REQUEST_TYPE, METRIC_TAG_VALUE_BATCH )
                 .highCardinalityKeyValue( 
                     METRIC_TAG_REQUEST_COUNT, 
                     String.valueOf( queued.size() ) 
                 )
-                .observe( () -> {
+                .observe( RateLimiter.decorateRunnable( rateLimiter, requests.size(), () -> {
                     try {
                         batch.execute();
                     } catch ( final IOException ex ) {
                         throw new RuntimeException( ex );
                     }
-                } );
+                } ) );
+            LOG.trace( "Batch request completed" );
         } catch ( final Exception ex ) {
             queued.forEach( request -> request.callback().onError( ex ) );
         }
@@ -300,6 +330,8 @@ public class DirectoryApiClient implements DirectoryApi {
             final GoogleJsonErrorContainer error, 
             final HttpHeaders responseHeaders 
         ) throws IOException {
+
+            LOG.debug( "Encountered Directory API error: {}", error );
 
             final var code = error.getError().getCode();
             final var message = error.getError().getMessage();

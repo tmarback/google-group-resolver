@@ -24,6 +24,8 @@ dependencies {
 
     implementation(libs.apache.commons.collections)
 
+    implementation(libs.resilience4j.ratelimiter)
+
     implementation("io.projectreactor:reactor-core-micrometer")
 
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")
