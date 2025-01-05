@@ -1,6 +1,7 @@
 package dev.sympho.google_group_resolver.google;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -45,6 +46,9 @@ public class DirectoryServiceProvider implements DirectoryService {
     /** Metric tag for the task count. */
     public static final String METRIC_TAG_TASK_COUNT = "task.count";
 
+    /** Metric type for the reason for re-attempting the task submission. */
+    public static final String METRIC_TAG_SUBMISSION_RETRY_REASON = "submission.retry.reason";
+
     /** Base metric name. */
     public static final Metrics.MetricName METRIC_BASE = Metrics.DIRECTORY_BASE.extend( "service" );
 
@@ -59,6 +63,11 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     /** Metric name for executed batches. */
     public static final Metrics.MetricName METRIC_BATCH = METRIC_BASE.extend( "batch" );
+
+    /** Metric name for task submission retries. */
+    public static final Metrics.MetricName METRIC_TASK_SUBMIT_RETRY = METRIC_TASKS.extend( 
+        "submit", "retry" 
+    );
 
     /** 
      * The maximum amount of time that the flux issued by {@link #getGroupsFor(String)} waits
@@ -114,12 +123,6 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private final Scheduler responseScheduler = Schedulers.parallel();
     /**
-     * The scheduler used when submitting new tasks to the queue.
-     * 
-     * <p>It must be single-threaded, as the task sink requires serialized access.
-     */
-    private final Scheduler taskSubmitScheduler = Schedulers.newSingle( "directory-service-tasks" );
-    /**
      * The scheduler used to process tasks before starting a request.
      * 
      * <p>Mainly to free up {@link #taskSubmitScheduler} once serialized access
@@ -140,6 +143,9 @@ public class DirectoryServiceProvider implements DirectoryService {
 
     /** The observation registry in use. */
     private final ObservationRegistry observations;
+
+    /** Counter of task submission retries due to serialization. */
+    private final Counter serializationRetries;
 
     /** The running task handler. */
     private @Nullable Disposable running;
@@ -171,6 +177,11 @@ public class DirectoryServiceProvider implements DirectoryService {
 
         this.meters = meters;
         this.observations = observations;
+
+        this.serializationRetries = Counter.builder( METRIC_TASK_SUBMIT_RETRY.name() )
+            .description( "How many times a task submission had to be re-tried" )
+            .tag( METRIC_TAG_SUBMISSION_RETRY_REASON, "contention" )
+            .register( meters );
 
     }
 
@@ -286,19 +297,26 @@ public class DirectoryServiceProvider implements DirectoryService {
      */
     private void submitTask( final Task<?> task ) {
 
-        // Needs to be done on a single-threaded scheduler
-        // since the sink needs serialized access
-        taskSubmitScheduler.schedule( () -> {
-            
-            LOG.trace( "Submitting task {}", task );
+        final var deadline = Instant.now().plus( Duration.ofSeconds( 1 ) );
+        do {
             final var result = taskSink.tryEmitNext( task );
-            if ( result != EmitResult.OK ) {
-                task.emitter().error( 
-                    new IllegalStateException( "Could not submit task: " + result ) 
-                );
+            switch ( result ) {
+                case EmitResult.OK: 
+                    return; // Done
+                case EmitResult.FAIL_NON_SERIALIZED:
+                    serializationRetries.increment();
+                    break; // Try again
+                default:
+                    task.emitter().error( 
+                        new IllegalStateException( "Could not submit task: " + result ) 
+                    );
+                    return;
             }
+        } while ( Instant.now().isBefore( deadline ) );
 
-        } );
+        task.emitter().error( 
+            new IllegalStateException( "Could not submit task due to contention" ) 
+        );
 
     }
 
