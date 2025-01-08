@@ -386,6 +386,7 @@ public class LRUGroupCache implements GroupCache {
          * @param email The email of the entity that this entry represents.
          * @param cached The value to cache, if any.
          */
+        @SuppressWarnings( "nullness:cast.unsafe" ) // Initialization doesn't matter for handlers
         private EntryImpl( final String email, final @Nullable List<DirectoryGroup> cached ) {
 
             this.cached = cached;
@@ -446,6 +447,9 @@ public class LRUGroupCache implements GroupCache {
                 .checkpoint( "Cache update" )
                 .name( METRIC_UPDATE.name() )
                 .tap( Micrometer.observation( observations ) )
+                .doOnError( ex -> LOG.error( "Cache update for {} failed: {}", email, ex ) )
+                // In case of error, remove this entry so a fresh attempt can be made
+                .doOnError( ex -> cache.remove( email, ( @Initialized EntryImpl ) this ) )
                 .cache(); // Make sure it can only be executed once
             
         }
