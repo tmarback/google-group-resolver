@@ -35,6 +35,8 @@ import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
+import reactor.util.retry.RetrySpec;
 
 /**
  * Implementation of the group cache using an LRU eviction strategy for trimming excess entries.
@@ -76,6 +78,9 @@ public class LRUGroupCache implements GroupCache {
 
     /** Logger. */
     private static final Logger LOG = LoggerFactory.getLogger( LRUGroupCache.class );
+
+    /** Retry strategy for update errors. */
+    private static final Retry UPDATE_RETRY = RetrySpec.backoff( 5, Duration.ofSeconds( 1 ) );
 
     /** The backing entry map. */
     private final ConcurrentMap<String, EntryImpl> cache = new ConcurrentHashMap<>();
@@ -447,6 +452,8 @@ public class LRUGroupCache implements GroupCache {
                 .checkpoint( "Cache update" )
                 .name( METRIC_UPDATE.name() )
                 .tap( Micrometer.observation( observations ) )
+                .doOnError( ex -> LOG.debug( "Error during update for {}: {}", email, ex ) )
+                .retryWhen( UPDATE_RETRY )
                 .doOnError( ex -> LOG.error( "Cache update for {} failed: {}", email, ex ) )
                 // In case of error, remove this entry so a fresh attempt can be made
                 .doOnError( ex -> cache.remove( email, ( @Initialized EntryImpl ) this ) )
