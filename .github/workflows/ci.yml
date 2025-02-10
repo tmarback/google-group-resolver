@@ -107,7 +107,7 @@ jobs:
         uses: gradle/actions/dependency-submission@v4
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.7.0
+        uses: sigstore/cosign-installer@v3.8.0
         with:
           cosign-release: 'v2.4.1'
 
