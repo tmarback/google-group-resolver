@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,6 +39,7 @@ import reactor.util.function.Tuple2;
 @ExtendWith( MockitoExtension.class )
 @Timeout( 5 )
 @ResourceLock( CustomResourceLocks.SCHEDULERS )
+@Isolated
 public class DirectoryServiceProviderTest {
 
     /** Logger. */
