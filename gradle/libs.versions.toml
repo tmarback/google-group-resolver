@@ -15,4 +15,4 @@ osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 [plugins]
 springboot = { id = "org.springframework.boot", version = "3.4.3" }
 tasktree = { id = "com.dorongold.task-tree", version = "4.0.0" }
-cyclonedx = { id = "org.cyclonedx.bom", version = "1.10.0" }
+cyclonedx = { id = "org.cyclonedx.bom", version = "2.2.0" }
