@@ -1,6 +1,7 @@
 {
     "java.compile.nullAnalysis.mode": "disabled",
     "java.configuration.updateBuildConfiguration": "automatic",
+    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx2G -Xms100m -Xlog:disable",
     "remote.restoreForwardedPorts": false,
     // Formatter
     "java.format.settings.url": "https://config.sympho.dev/EclipseJavaFormatters.xml",
