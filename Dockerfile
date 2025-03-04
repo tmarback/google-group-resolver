@@ -14,7 +14,7 @@ RUN mkdir config
 
 ENV LOGLEVEL=INFO
 
-ENV JVM_ARGS="-XX:InitialRAMPercentage=10.0 -XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC -XX:G1PeriodicGCInterval=60000 -XX:G1PeriodicGCSystemLoadThreshold=0.1 -XX:+G1PeriodicGCInvokesConcurrent"
+ENV JVM_ARGS="-XX:InitialRAMPercentage=10.0 -XX:MinRAMPercentage=50.0 -XX:MaxRAMPercentage=70.0 -XX:+UseG1GC"
 ENV EXTRA_JVM_ARGS=""
 
 ENTRYPOINT [ "/opt/app/docker-entrypoint.sh" ]
