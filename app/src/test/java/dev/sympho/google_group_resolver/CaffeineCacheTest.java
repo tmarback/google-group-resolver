@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import reactor.core.publisher.Flux;
 
@@ -32,6 +33,7 @@ public class CaffeineCacheTest extends GroupCacheTest<CaffeineGroupCache> {
             TTL_VALID, 
             TTL_STALE, 
             CAPACITY,
+            new CompositeMeterRegistry(),
             ObservationRegistry.NOOP
         );
 

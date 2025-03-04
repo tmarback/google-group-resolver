@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Configuration;
 
 import dev.sympho.google_group_resolver.google.DirectoryService;
 import dev.sympho.google_group_resolver.google.ServiceSettings;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 
 /**
@@ -43,6 +44,7 @@ public class ResolverConfiguration {
      *
      * @param directory The directory service.
      * @param config The cache settings.
+     * @param meters The meter registry to use.
      * @param observations The observation registry to use.
      * @return The group cache.
      */
@@ -50,6 +52,7 @@ public class ResolverConfiguration {
     GroupCache cache( 
         final DirectoryService directory, 
         final CacheSettings config, 
+        final MeterRegistry meters,
         final ObservationRegistry observations 
     ) {
 
@@ -59,6 +62,7 @@ public class ResolverConfiguration {
                 config.ttlValid(), 
                 config.ttlStale(), 
                 config.capacity(),
+                meters,
                 observations
             );
         } else {

@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import dev.sympho.google_group_resolver.google.DirectoryService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics;
 import io.micrometer.observation.ObservationRegistry;
 import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.Mono;
@@ -48,6 +50,7 @@ public class CaffeineGroupCache implements GroupCache {
      * @param ttlLive How long after being fetched that data should become stale.
      * @param ttlStale How long after becoming stale that data should become expired.
      * @param capacity The target capacity of the cache.
+     * @param meters The meter registry to use.
      * @param observations The observation registry to use.
      */
     public CaffeineGroupCache(
@@ -55,6 +58,7 @@ public class CaffeineGroupCache implements GroupCache {
         final Duration ttlLive, 
         final Duration ttlStale,
         final long capacity,
+        final MeterRegistry meters,
         final ObservationRegistry observations
     ) {
 
@@ -63,6 +67,7 @@ public class CaffeineGroupCache implements GroupCache {
 
         this.cache = Caffeine.newBuilder()
             .scheduler( Scheduler.systemScheduler() )
+            .recordStats()
             .maximumSize( capacity )
             // refresh() will be called anyway if stale, but might as well issue the refresh
             // while that happens since the refresh is deduplicated
@@ -75,6 +80,9 @@ public class CaffeineGroupCache implements GroupCache {
                 .subscribeOn( Schedulers.fromExecutor( executor ) )
                 .toFuture()
             );
+
+        // Record metrics
+        CaffeineCacheMetrics.monitor( meters, this.cache, "group-cache" );
 
     }
 
