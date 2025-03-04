@@ -3,33 +3,24 @@ package dev.sympho.google_group_resolver;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.ResourceAccessMode;
-import org.junit.jupiter.api.parallel.ResourceLock;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import dev.sympho.google_group_resolver.google.DirectoryApiFixture;
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
-import dev.sympho.google_group_resolver.google.DirectoryService;
 import io.micrometer.observation.ObservationRegistry;
-import reactor.core.publisher.Flux;
-import reactor.scheduler.clock.SchedulerClock;
-import reactor.test.StepVerifier;
-import reactor.test.scheduler.VirtualTimeScheduler;
+import reactor.core.publisher.Mono;
 
 /**
  * Unit tests for {@link RecursiveGroupResolver}.
@@ -38,40 +29,64 @@ import reactor.test.scheduler.VirtualTimeScheduler;
 @Timeout( 5 )
 public class RecursiveGroupResolverTest {
 
-    /**
-     * Base configuration for tests.
+    /** The target email to query. */
+    private static final String TARGET_EMAIL = "my-email@foo.bar";
+
+    /** The mappings to test for. */
+    private static final List<Map.Entry<String, List<DirectoryGroup>>> MAPPINGS = List.of(
+        Map.entry( TARGET_EMAIL, List.of(
+            new DirectoryGroup( "test-1", "test-1@foo.bar" ),
+            new DirectoryGroup( "test-2", "test-2@foo.bar" ),
+            new DirectoryGroup( "test-3", "test-3@foo.bar" )
+        ) ),
+        Map.entry( "test-1@foo.bar", List.of(
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
+        ) ),
+        Map.entry( "test-2@foo.bar", List.of(
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "D", "d@foo.bar" ), 
+            new DirectoryGroup( "E", "e@foo.bar" )
+        ) ),
+        Map.entry( "test-3@foo.bar", List.of(
+            new DirectoryGroup( "F", "f@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "G", "g@foo.bar" )
+        ) ),
+        Map.entry( "a@foo.bar", List.of(
+            new DirectoryGroup( "1", "1@foo.bar" ), 
+            new DirectoryGroup( "2", "2@foo.bar" )
+        ) )
+    );
+
+    /** Expected results from the query. */
+    private static final Set<DirectoryGroup> EXPECTED = MAPPINGS.stream()
+        .flatMap( e -> e.getValue().stream() )
+        .collect( Collectors.toSet() );
+
+    /** 
+     * A mock cache entry. 
      *
-     * @param <C> The cache implementation being used.
+     * @param valid Whether the entry is valid.
+     * @param value The entry value.
      */
-    private abstract class Base<C extends GroupCache> {
+    private record MockEntry(
+        boolean valid,
+        List<DirectoryGroup> value
+    ) implements GroupCache.Entry {}
 
-        /** Simulated query latency. */
-        static final Duration DELAY = Duration.ofMillis( 100 );
+    /**
+     * The tests to run.
+     */
+    private abstract class Base {
 
-        /** The backing directory service mock. */
+        /** The cache mock. */
         @Mock
-        DirectoryService directory;
+        protected GroupCache cache;
 
-        /** The cache being used. */
-        C cache;
-
-        /** The instance under test. */
+        /** The instance to test. */
         RecursiveGroupResolver iut;
-
-        /**
-         * Creates and starts the cache to use.
-         *
-         * @param client The backing directory service.
-         * @return The cache.
-         */
-        protected abstract C makeCache( DirectoryService client );
-
-        /**
-         * Stops the cache.
-         *
-         * @param c The cache.
-         */
-        protected abstract void stopCache( C c );
 
         /**
          * Whether to enable prefetching.
@@ -86,547 +101,154 @@ public class RecursiveGroupResolverTest {
         @BeforeEach
         public void setUp() {
 
-            cache = Objects.requireNonNull( makeCache( directory ) );
-
             iut = new RecursiveGroupResolver( cache, prefetch(), ObservationRegistry.NOOP );
 
+            final var defaultEntry = new MockEntry( false, Collections.emptyList() );
+            Mockito.when( cache.get( anyString() ) )
+                .thenReturn( Mono.just( defaultEntry ) );
+            Mockito.when( cache.update( anyString() ) )
+                .thenReturn( Mono.just( defaultEntry ) );
+
         }
 
         /**
-         * Cleans up the test environment.
+         * Checks that the IUT gives the correct result.
          */
-        @AfterEach
-        public void tearDown() {
+        private void checkResult() {
 
-            stopCache( cache );
+            final var result = iut.getGroupsFor( TARGET_EMAIL )
+                .collectList()
+                .block();
 
-        }
-
-        /**
-         * Configures the directory service mock with test data.
-         *
-         * @param insertDelay If {@code true}, adds a {@link #DELAY simulated latency} to every
-         *                    query.
-         */
-        protected void configureMock( final boolean insertDelay ) {
-
-            Mockito.when( directory.getGroupsFor( anyString() ) ).thenAnswer( invocation -> {
-
-                final String email = invocation.getArgument( 0 );
-
-                final var groups = DirectoryApiFixture.GROUP_MAP.get( email );
-                final var result = groups == null ? Flux.empty() : Flux.fromIterable( groups );
-
-                return insertDelay ? result.delaySubscription( DELAY ) : result;
-
-            } );
-
-        }
-
-    }
-
-    /**
-     * Behavioral tests that all configurations should satisfy.
-     *
-     * @param <C> The cache implementation being used.
-     */
-    @ResourceLock( value = CustomResourceLocks.SCHEDULERS, mode = ResourceAccessMode.READ )
-    private abstract class BehaviorTests<C extends GroupCache> extends Base<C> {
-
-        /**
-         * Configures test data before each test.
-         */
-        @BeforeEach
-        public void configureMock() {
-
-            configureMock( false );
+            assertThat( result ).containsExactlyInAnyOrderElementsOf( EXPECTED );
 
         }
 
         /**
-         * Argument provider for {@link #testResolveOne(String)}.
-         *
-         * @return The arguments.
-         */
-        private static Stream<String> testResolveOne() {
-
-            return DirectoryApiFixture.RESOLVED_GROUPS.keySet().stream();
-
-        }
-
-        /**
-         * Tests that the resolver can successfully resolve the groups of a single entity.
-         *
-         * @param email The email to query.
-         */
-        @ParameterizedTest
-        @MethodSource
-        public void testResolveOne( final String email ) {
-
-            final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
-
-            StepVerifier.create( iut.getGroupsFor( email )
-                    .map( DirectoryGroup::email )
-                    .collectList() 
-                )
-                .assertNext( groups -> assertThat( groups ) 
-                    .containsExactlyInAnyOrderElementsOf( expected )
-                )
-                .verifyComplete();
-
-        }
-
-        /**
-         * Tests that the resolver can successfully resolve the groups of multiple entities.
+         * Tests a query with no entries cached.
          */
         @Test
-        public void testResolveAll() {
+        public void testNotCached() {
 
-            for ( final var entry : DirectoryApiFixture.RESOLVED_GROUP_EMAILS.entrySet() ) {
+            for ( final var entry : MAPPINGS ) {
 
                 final var email = entry.getKey();
-                final var expected = entry.getValue();
+                final var groups = entry.getValue();
 
-                StepVerifier.create( iut.getGroupsFor( email )
-                        .map( DirectoryGroup::email )
-                        .collectList() 
-                    )
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .verifyComplete();
+                Mockito.lenient().when( cache.update( email ) )
+                    .thenReturn( Mono.just( new MockEntry( true, groups ) ) );
 
             }
+
+            checkResult();
 
         }
 
         /**
-         * Tests that the resolver can successfully resolve the groups of multiple entities
-         * multiple times.
+         * Tests a query with cached entries.
          */
         @Test
-        public void testResolveAllRepeat() {
+        public void testCached() {
 
-            for ( int i = 0; i < 5; i++ ) {
-                for ( final var entry : DirectoryApiFixture.RESOLVED_GROUP_EMAILS.entrySet() ) {
+            for ( final var entry : MAPPINGS ) {
 
-                    final var email = entry.getKey();
-                    final var expected = entry.getValue();
+                final var email = entry.getKey();
+                final var groups = entry.getValue();
 
-                    StepVerifier.create( iut.getGroupsFor( email )
-                            .map( DirectoryGroup::email )
-                            .collectList() 
-                        )
-                        .assertNext( groups -> assertThat( groups ) 
-                            .containsExactlyInAnyOrderElementsOf( expected )
-                        )
-                        .verifyComplete();
+                Mockito.lenient().when( cache.get( email ) )
+                    .thenReturn( Mono.just( new MockEntry( true, groups ) ) );
 
-                }
             }
 
-        }
-
-    }
-
-    /**
-     * Timing tests that are affected by the configuration.
-     *
-     * @param <C> The cache implementation being used.
-     */
-    @ResourceLock( value = CustomResourceLocks.SCHEDULERS, mode = ResourceAccessMode.READ_WRITE )
-    private abstract class TimingTests<C extends GroupCache> extends Base<C> {
-
-        /** The virtual scheduler to use. */
-        VirtualTimeScheduler scheduler;
-
-        @BeforeEach
-        @Override
-        public void setUp() {
-
-            scheduler = VirtualTimeScheduler.getOrSet( true );
-
-            super.setUp();
+            checkResult();
 
         }
 
         /**
-         * Stops the task handler after each test.
+         * Tests a query with cached but stale entries.
          */
-        @AfterEach
-        @Override
-        public void tearDown() {
+        @Test
+        public void testCachedStale() {
 
-            super.tearDown();
-
-            VirtualTimeScheduler.reset();
-
-        }
-
-        /**
-         * Configures test data before each test.
-         */
-        @BeforeEach
-        public void configureMock() {
-
-            configureMock( true );
-
-        }
-
-    }
-
-    /**
-     * Tests a configuration without caching.
-     * 
-     * <p>Since not having a cache makes the resolver effectively stateless, timing tests are not
-     * necessary.
-     */
-    @Nested
-    public class NoCache extends BehaviorTests<PassthroughGroupCache> {
-
-        @Override
-        protected PassthroughGroupCache makeCache( final DirectoryService directory ) {
-
-            return new PassthroughGroupCache( directory );
-
-        }
-
-        @Override
-        protected void stopCache( final PassthroughGroupCache cache ) {}
-
-        @Override
-        protected boolean prefetch() {
-
-            return false;
-
-        }
-
-    }
-
-    /**
-     * Tests a configuration with caching.
-     */
-    public abstract class WithCache {
-
-        /** The amount of time that a cache entry remains valid. */
-        static final Duration TTL_LIVE = Duration.ofSeconds( 1 );
-
-        /** The amount of time that a cache entry remains stale. */
-        static final Duration TTL_STALE = Duration.ofMinutes( 1 );
-
-        /** How often the cleaner task runs. */
-        static final Duration CLEANER_PERIOD = Duration.ofMinutes( 10 );
-
-        /** The cache size. */
-        static final int CACHE_SIZE = 100;
-
-        /**
-         * Configures the cache.
-         *
-         * @param directory The directory service to use.
-         * @param clock The clock to use.
-         * @return The configured cache.
-         */
-        private LRUGroupCache makeCache( final DirectoryService directory, final Clock clock ) {
-
-            final var cache = new LRUGroupCache( 
-                directory,
-                TTL_LIVE,
-                TTL_STALE,
-                CLEANER_PERIOD,
-                CACHE_SIZE,
-                clock,
-                ObservationRegistry.NOOP
+            final var staleMappings = List.of(
+                Map.entry( TARGET_EMAIL, List.of(
+                    new DirectoryGroup( "test-1", "test-1@foo.bar" ),
+                    new DirectoryGroup( "test-2", "test-2@foo.bar" ),
+                    new DirectoryGroup( "test-3", "test-3@foo.bar" ),
+                    new DirectoryGroup( "test-4", "test-4@foo.bar" )
+                ) ),
+                Map.entry( "test-1@foo.bar", List.of(
+                    new DirectoryGroup( "A", "a@foo.bar" ), 
+                    new DirectoryGroup( "B", "b@foo.bar" )
+                ) ),
+                Map.entry( "test-2@foo.bar", List.of(
+                    new DirectoryGroup( "A", "a@foo.bar" ), 
+                    new DirectoryGroup( "D", "d@foo.bar" ), 
+                    new DirectoryGroup( "E", "e@foo.bar" )
+                ) ),
+                Map.entry( "test-3@foo.bar", List.of(
+                    new DirectoryGroup( "M", "m@foo.bar" ), 
+                    new DirectoryGroup( "N", "n@foo.bar" ), 
+                    new DirectoryGroup( "O", "o@foo.bar" )
+                ) ),
+                Map.entry( "test-4@foo.bar", List.of(
+                    new DirectoryGroup( "F", "f@foo.bar" ), 
+                    new DirectoryGroup( "Z", "z@foo.bar" )
+                ) ),
+                Map.entry( "a@foo.bar", List.of(
+                    new DirectoryGroup( "1", "1@foo.bar" ), 
+                    new DirectoryGroup( "2", "2@foo.bar" )
+                ) )
             );
 
-            cache.startCleaner();
-            return cache;
+            for ( final var entry : staleMappings ) {
 
-        }
+                final var email = entry.getKey();
+                final var groups = entry.getValue();
 
-        /**
-         * Stops the cache.
-         *
-         * @param cache The configured cache.
-         */
-        private void stopCache( final LRUGroupCache cache ) {
-
-            cache.stopCleaner();
-
-        }
-
-        /**
-         * Whether to enable prefetching.
-         *
-         * @return Whether to enable prefetching.
-         */
-        protected abstract boolean prefetch();
-
-        /**
-         * Behavioral tests.
-         */
-        @Nested
-        public class Behavior extends BehaviorTests<LRUGroupCache> {
-
-            @Override
-            protected LRUGroupCache makeCache( final DirectoryService directory ) {
-                return WithCache.this.makeCache( directory, Clock.systemUTC() );
-            }
-
-            @Override
-            protected void stopCache( final LRUGroupCache cache ) {
-                WithCache.this.stopCache( cache );
-            }
-
-            @Override
-            protected boolean prefetch() {
-                return WithCache.this.prefetch();
-            }
-
-        }
-
-        /**
-         * Timing-dependent tests.
-         */
-        public abstract class Timing extends TimingTests<LRUGroupCache> {
-
-            @Override
-            protected LRUGroupCache makeCache( final DirectoryService directory ) {
-                return WithCache.this.makeCache( directory, SchedulerClock.of( scheduler ) );
-            }
-
-            @Override
-            protected void stopCache( final LRUGroupCache cache ) {
-                WithCache.this.stopCache( cache );
-            }
-
-            @Override
-            protected boolean prefetch() {
-                return WithCache.this.prefetch();
-            }
-
-            /* Tests that are not affected by prefetching */
-
-            /**
-             * Argument provider for {@link #testCleanQuery(String)}.
-             *
-             * @return The arguments.
-             */
-            private static Stream<String> testCleanQuery() {
-
-                return DirectoryApiFixture.RESOLVED_GROUPS.keySet().stream();
-    
-            }
-
-            /**
-             * Tests resolving a single entity with a clean cache.
-             *
-             * @param email The email to query.
-             */
-            @ParameterizedTest
-            @MethodSource
-            public void testCleanQuery( final String email ) {
-
-                final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
-                final var depth = DirectoryApiFixture.RESOLVED_GROUP_DEPTH.get( email );
-
-                StepVerifier.withVirtualTime(
-                        () -> iut.getGroupsFor( email )
-                            .map( DirectoryGroup::email )
-                            .collectList(),
-                        () -> scheduler,
-                        Long.MAX_VALUE
-                    )
-                    .expectSubscription()
-                    .expectNoEvent( DELAY.multipliedBy( 1 + depth ) )
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .verifyComplete();
+                Mockito.lenient().when( cache.get( email ) )
+                    .thenReturn( Mono.just( new MockEntry( false, groups ) ) );
 
             }
 
-            /**
-             * Tests resolving entities that are fully cached.
-             */
-            @Test
-            public void testQueryCached() {
+            for ( final var entry : MAPPINGS ) {
 
-                final var verifier = StepVerifier.withVirtualTime(
-                        () -> {
-                            
-                            final var cache = Flux.fromIterable( 
-                                    DirectoryApiFixture.RESOLVED_GROUP_EMAILS.keySet() 
-                                )
-                                .flatMap( email -> iut.getGroupsFor( email )
-                                    .map( DirectoryGroup::email )
-                                    .collectList()
-                                );
+                final var email = entry.getKey();
+                final var groups = entry.getValue();
 
-                            final var fetch = Flux.fromIterable( 
-                                        DirectoryApiFixture.RESOLVED_GROUP_EMAILS.keySet() 
-                                    )
-                                    .concatMap( email -> iut.getGroupsFor( email )
-                                        .map( DirectoryGroup::email )
-                                        .collectList()
-                                    );
-
-                            return cache.thenMany( fetch );
-
-                        },
-                        () -> scheduler,
-                        Long.MAX_VALUE
-                    )
-                    .expectSubscription()
-                    .expectNoEvent( DELAY ) // Put in cache
-                    .expectNoEvent( DELAY ); // Second one to try the non-existent groups
-
-                for ( final var expected : DirectoryApiFixture.RESOLVED_GROUP_EMAILS.values() ) {
-
-                    // Should have no delay since everything is cached
-                    verifier.assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    );
-
-                }
-
-                verifier.thenAwait( Duration.ofHours( 1 ) ).verifyComplete();
+                Mockito.lenient().when( cache.update( email ) )
+                    .thenReturn( Mono.just( new MockEntry( true, groups ) ) );
 
             }
 
-            /* Tests that are affected by prefetching */
-            /* The @Test needs to be added on the implementation */
-
-            /**
-             * Tests querying when data is stale but not expired.
-             */
-            public abstract void testStaleQuery();
+            checkResult();
 
         }
 
     }
 
     /**
-     * Tests for a cached resolver with prefetching disabled.
+     * Tests the resolver with prefetch disabled.
      */
     @Nested
-    public class WithCacheWithoutPrefetch extends WithCache {
+    public class WithoutPrefetch extends Base {
 
         @Override
         protected boolean prefetch() {
-
             return false;
-
-        }
-
-        /**
-         * Timing-dependent tests.
-         */
-        @Nested
-        public class Timing extends WithCache.Timing {
-
-            @Test
-            @Override
-            public void testStaleQuery() {
-
-                final var email = "foo@org.com";
-                final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
-                final int depth = DirectoryApiFixture.RESOLVED_GROUP_DEPTH.get( email );
-                // Direct + each level + non-existing
-                final var fetchDelay = DELAY.multipliedBy( 1 + depth );
-
-                StepVerifier.withVirtualTime(
-                        () -> {
-                            
-                            final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                .map( DirectoryGroup::email )
-                                .collectList();
-
-                            return Flux.concat(
-                                fetch,
-                                fetch.delaySubscription( TTL_LIVE )
-                            );
-
-                        },
-                        () -> scheduler,
-                        Long.MAX_VALUE
-                    )
-                    .expectSubscription()
-                    .expectNoEvent( fetchDelay )
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .expectNoEvent( TTL_LIVE )
-                    .expectNoEvent( fetchDelay )
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .verifyComplete();
-
-            }
-
         }
 
     }
 
     /**
-     * Tests for a cached resolver with prefetching enabled.
+     * Tests the resolver with prefetch enabled.
      */
     @Nested
-    public class WithCacheWithPrefetch extends WithCache {
+    public class WithPrefetch extends Base {
 
         @Override
         protected boolean prefetch() {
-
             return true;
-
-        }
-
-        /**
-         * Timing-dependent tests.
-         */
-        @Nested
-        public class Timing extends WithCache.Timing {
-
-            @Test
-            public void testStaleQuery() {
-
-                final var email = "foo@org.com";
-                final var expected = DirectoryApiFixture.RESOLVED_GROUP_EMAILS.get( email );
-                final int depth = DirectoryApiFixture.RESOLVED_GROUP_DEPTH.get( email );
-                // Direct + each level + non-existing
-                final var fetchDelay = DELAY.multipliedBy( 1 + depth );
-
-                StepVerifier.withVirtualTime(
-                        () -> {
-                            
-                            final var fetch = Flux.defer( () -> iut.getGroupsFor( email ) )
-                                .map( DirectoryGroup::email )
-                                .collectList();
-
-                            return Flux.concat(
-                                fetch,
-                                fetch.delaySubscription( TTL_LIVE )
-                            );
-
-                        },
-                        () -> scheduler,
-                        Long.MAX_VALUE
-                    )
-                    .expectSubscription()
-                    .expectNoEvent( fetchDelay )
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .expectNoEvent( TTL_LIVE )
-                    .expectNoEvent( DELAY ) // All cache refreshed at once with prefetch
-                    .assertNext( groups -> assertThat( groups ) 
-                        .containsExactlyInAnyOrderElementsOf( expected )
-                    )
-                    .verifyComplete();
-
-            }
-
         }
 
     }

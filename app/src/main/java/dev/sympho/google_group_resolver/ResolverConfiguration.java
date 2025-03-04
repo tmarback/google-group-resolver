@@ -54,16 +54,18 @@ public class ResolverConfiguration {
     ) {
 
         if ( config.enabled() ) {
-            return new LRUGroupCache( 
+            return new CaffeineGroupCache( 
                 directory, 
                 config.ttlValid(), 
                 config.ttlStale(), 
-                config.cleanerPeriod(), 
                 config.capacity(),
                 observations
             );
         } else {
-            return new PassthroughGroupCache( directory );
+            return new PassthroughGroupCache( 
+                directory,
+                config.ttlValid()
+            );
         }
 
     }

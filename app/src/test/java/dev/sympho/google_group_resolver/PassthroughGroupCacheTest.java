@@ -8,7 +8,7 @@ public class PassthroughGroupCacheTest extends GroupCacheTest<PassthroughGroupCa
     @Override
     protected PassthroughGroupCache makeIUT() {
 
-        return new PassthroughGroupCache( directory );
+        return new PassthroughGroupCache( directory, TTL_VALID );
 
     }
     

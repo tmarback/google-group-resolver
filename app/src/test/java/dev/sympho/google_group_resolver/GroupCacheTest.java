@@ -2,17 +2,14 @@ package dev.sympho.google_group_resolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.parallel.ResourceLock;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,9 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
 import reactor.core.publisher.Flux;
-import reactor.scheduler.clock.SchedulerClock;
-import reactor.test.StepVerifier;
-import reactor.test.scheduler.VirtualTimeScheduler;
 
 /**
  * Base for {@link GroupCache} implementations.
@@ -31,18 +25,14 @@ import reactor.test.scheduler.VirtualTimeScheduler;
  */
 @ExtendWith( MockitoExtension.class )
 @Timeout( 5 )
-@ResourceLock( CustomResourceLocks.SCHEDULERS ) // Scheduler set up globally
 public abstract class GroupCacheTest<T extends GroupCache> {
+
+    /** The time an entry stays in valid status. */
+    protected static final Duration TTL_VALID = Duration.ofMillis( 500 );
 
     /** The directory service. */
     @Mock
     DirectoryService directory;
-
-    /** The virtual scheduler to use. */
-    VirtualTimeScheduler scheduler;
-
-    /** The clock to use. */
-    Clock clock;
 
     /** The instance being tested. */
     T iut;
@@ -53,21 +43,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
     @BeforeEach
     public void setUp() {
 
-        scheduler = VirtualTimeScheduler.getOrSet( true );
-
-        clock = SchedulerClock.of( scheduler );
-
         iut = makeIUT();
-
-    }
-
-    /**
-     * Stops running test services.
-     */
-    @AfterEach
-    public void tearDown() {
-
-        VirtualTimeScheduler.reset();
 
     }
 
@@ -82,7 +58,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
      * Tests fetching a single entry one time.
      */
     @Test
-    public void testFetchOneOnce() {
+    public void testGetOneOnce() {
 
         final var email = "test@foo.bar";
         final var groups = List.of( 
@@ -91,29 +67,44 @@ public abstract class GroupCacheTest<T extends GroupCache> {
             new DirectoryGroup( "C", "c@foo.bar" )
         );
 
-        final var delay = Duration.ofSeconds( 1 );
+        Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
 
-        StepVerifier.withVirtualTime( () -> {
+        final var result = iut.get( email ).block();
+        assertThat( result.valid() ).isTrue();
+        assertThat( result.value() )
+            .containsExactlyInAnyOrderElementsOf( groups );
 
-            Mockito.when( directory.getGroupsFor( email ) )
-                .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( 1, iut.capacity() ) );
 
-            final var entry = iut.get( email );
+    }
 
-            assertThat( entry.valid() ).isFalse();
-            assertThat( entry.value() ).isNull();
+    /**
+     * Tests fetching the same entry multiple times.
+     */
+    @Test
+    public void testGetOneRepeat() {
 
-            return entry.latest().doOnSuccess( s -> assertThat( iut.size() )
-                .isEqualTo( Math.min( 1, iut.capacity() ) ) 
-            );
+        final var email = "test@foo.bar";
+        final var groups = List.of( 
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
+        );
 
-        }, () -> scheduler, Long.MAX_VALUE )
-            .expectSubscription()
-            .expectNoEvent( delay )
-            .assertNext( result -> assertThat( result )
-                .containsExactlyInAnyOrderElementsOf( groups ) 
-            )
-            .verifyComplete();
+        Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
+
+        for ( int i = 0; i < 4; i++ ) {
+            final var result = iut.get( email ).block();
+            assertThat( result.valid() ).isTrue();
+            assertThat( result.value() )
+                .containsExactlyInAnyOrderElementsOf( groups );
+        }
+
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( 1, iut.capacity() ) );
 
     }
 
@@ -121,7 +112,7 @@ public abstract class GroupCacheTest<T extends GroupCache> {
      * Tests fetching many entries one time.
      */
     @Test
-    public void testFetchManyOnce() {
+    public void testGetManyOnce() {
 
         final var cases = List.of(
             Map.entry( "test-1@foo.bar", List.of(
@@ -141,51 +132,158 @@ public abstract class GroupCacheTest<T extends GroupCache> {
             ) )
         );
 
-        final var delay = Duration.ofSeconds( 1 );
+        for ( final var entry : cases ) {
 
-        final var verifier = StepVerifier.withVirtualTime( () -> {
+            final var email = entry.getKey();
+            final var groups = entry.getValue();
 
+            Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
+
+        }
+
+        for ( final var entry : cases ) {
+
+            final var email = entry.getKey();
+            final var groups = entry.getValue();
+
+            final var result = iut.get( email ).block();
+            assertThat( result.valid() ).isTrue();
+            assertThat( result.value() )
+                .containsExactlyInAnyOrderElementsOf( groups );
+
+        }
+
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( cases.size(), iut.capacity() ) );
+
+    }
+
+    /**
+     * Tests fetching many entries multiple times.
+     */
+    @Test
+    public void testGetManyRepeat() {
+
+        final var cases = List.of(
+            Map.entry( "test-1@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "C", "c@foo.bar" )
+            ) ),
+            Map.entry( "test-2@foo.bar", List.of(
+                new DirectoryGroup( "A", "a@foo.bar" ), 
+                new DirectoryGroup( "D", "d@foo.bar" ), 
+                new DirectoryGroup( "E", "e@foo.bar" )
+            ) ),
+            Map.entry( "test-3@foo.bar", List.of(
+                new DirectoryGroup( "F", "f@foo.bar" ), 
+                new DirectoryGroup( "B", "b@foo.bar" ), 
+                new DirectoryGroup( "G", "g@foo.bar" )
+            ) )
+        );
+
+        for ( final var entry : cases ) {
+
+            final var email = entry.getKey();
+            final var groups = entry.getValue();
+
+            Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
+
+        }
+
+        for ( int i = 0; i < 5; i++ ) {
             for ( final var entry : cases ) {
 
                 final var email = entry.getKey();
                 final var groups = entry.getValue();
 
-                Mockito.when( directory.getGroupsFor( email ) )
-                    .thenReturn( Flux.fromIterable( groups ).delaySubscription( delay ) );
+                final var result = iut.get( email ).block();
+                assertThat( result.valid() ).isTrue();
+                assertThat( result.value() )
+                    .containsExactlyInAnyOrderElementsOf( groups );
 
             }
-
-            final var entries = cases.stream()
-                .map( e -> {
-
-                    final var entry = iut.get( e.getKey() );
-
-                    assertThat( entry.valid() ).isFalse();
-                    assertThat( entry.value() ).isNull();
-
-                    return entry.latest();
-
-                } ).toList();
-
-            return Flux.fromIterable( entries )
-                .flatMap( e -> e )
-                .doOnComplete( () -> assertThat( iut.size() )
-                    .isEqualTo( Math.min( cases.size(), iut.capacity() ) ) 
-                );
-
-        }, () -> scheduler, Long.MAX_VALUE )
-            .expectSubscription()
-            .expectNoEvent( delay );
-
-        for ( final var entry : cases ) {
-
-            verifier.assertNext( result -> assertThat( result )
-                .containsExactlyInAnyOrderElementsOf( entry.getValue() ) 
-            );
-
         }
-        
-        verifier.verifyComplete();
+
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( cases.size(), iut.capacity() ) );
+
+    }
+
+    /**
+     * Tests that an entry is marked as not valid after expiring.
+     */
+    @Test
+    public void testValidMarker() throws InterruptedException {
+
+        final var email = "test@foo.bar";
+        final var groups = List.of( 
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
+        );
+
+        Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
+
+        final var result = iut.get( email ).block();
+        assertThat( result.valid() ).isTrue();
+        assertThat( result.value() )
+            .containsExactlyInAnyOrderElementsOf( groups );
+
+        Thread.sleep( TTL_VALID );
+
+        assertThat( result.valid() ).isFalse();
+
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( 1, iut.capacity() ) );
+
+    }
+
+    /**
+     * Tests that the cached value of an entry is updated 
+     */
+    @Test
+    public void testEntryUpdate() throws InterruptedException {
+
+        final var email = "test@foo.bar";
+        final var groups = List.of( 
+            new DirectoryGroup( "A", "a@foo.bar" ), 
+            new DirectoryGroup( "B", "b@foo.bar" ), 
+            new DirectoryGroup( "C", "c@foo.bar" )
+        );
+        final var newGroups = List.of( 
+            new DirectoryGroup( "D", "d@foo.bar" ), 
+            new DirectoryGroup( "E", "e@foo.bar" ), 
+            new DirectoryGroup( "F", "f@foo.bar" )
+        );
+
+        Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( groups ) );
+
+        for ( int i = 0; i < 2; i++ ) {
+            final var result = iut.update( email ).block();
+            assertThat( result.valid() ).isTrue();
+            assertThat( result.value() )
+                .containsExactlyInAnyOrderElementsOf( groups );
+        }
+
+        Thread.sleep( TTL_VALID );
+
+        Mockito.when( directory.getGroupsFor( email ) )
+                .thenReturn( Flux.fromIterable( newGroups ) );
+
+        for ( int i = 0; i < 2; i++ ) {
+            final var result = iut.update( email ).block();
+            assertThat( result.valid() ).isTrue();
+            assertThat( result.value() )
+                .containsExactlyInAnyOrderElementsOf( newGroups );
+        }
+
+        assertThat( iut.size() )
+            .isEqualTo( Math.min( 1, iut.capacity() ) );
 
     }
     

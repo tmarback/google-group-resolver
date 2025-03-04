@@ -26,6 +26,8 @@ dependencies {
 
     implementation(libs.resilience4j.ratelimiter)
 
+    implementation("com.github.ben-manes.caffeine:caffeine")
+
     implementation("io.projectreactor:reactor-core-micrometer")
 
 	runtimeOnly("io.micrometer:micrometer-registry-prometheus")

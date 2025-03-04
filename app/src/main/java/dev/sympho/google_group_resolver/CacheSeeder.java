@@ -83,7 +83,7 @@ public class CacheSeeder {
 
         return directory.getGroups()
             .map( DirectoryGroup::email )
-            .flatMap( email -> cache.get( email ).latest() )
+            .flatMap( email -> cache.update( email ) )
             .count()
             .doOnSubscribe( s -> LOG.debug( "Seeding cache" ) )
             .doOnSuccess( c -> LOG.info( "Seeded cache with {} entries", c ) )

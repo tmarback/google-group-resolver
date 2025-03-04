@@ -14,6 +14,7 @@ import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import io.micrometer.observation.ObservationRegistry;
 import reactor.core.observability.micrometer.Micrometer;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Group resolver that includes indirect group memberships.
@@ -119,14 +120,19 @@ public class RecursiveGroupResolver implements GroupResolver {
      */
     private Flux<DirectoryGroup> getGroupsFor( final String email, final Set<String> seen ) {
 
-        final var entry = cache.get( email );
-        
-        final Flux<DirectoryGroup> prefetcher;
-        if ( prefetch && !entry.valid() ) {
-            final var cached = entry.value();
-            if ( cached != null ) { // Stale but non-expired cache value, use for prefetch
-                // Don't need to wait for the prefetch to finish, just let it run in the background
-                prefetcher = getIndirectGroups( email, cached, seen )
+        return cache.get( email )
+            .flatMap( e -> {
+
+                if ( e.valid() ) {
+                    return Mono.just( e );
+                }
+
+                final var updated = cache.update( email );
+                if ( !prefetch ) {
+                    return updated;
+                }
+
+                final var prefetcher = getIndirectGroups( email, e.value(), seen )
                     .checkpoint( "Resolution (prefetch)" )
                     .name( METRIC_PREFETCH.name() )
                     .doOnSubscribe( s -> Metrics.addHighCardinalityKeyValue( 
@@ -134,15 +140,17 @@ public class RecursiveGroupResolver implements GroupResolver {
                         METRIC_TAG_QUERY_VALUE, email 
                     ) )
                     .tap( Micrometer.observation( observations ) )
-                    .cache(); // Don't cancel the prefetch
-            } else {
-                prefetcher = Flux.empty();
-            }
-        } else {
-            prefetcher = Flux.empty();
-        }
+                    .cache() // Don't cancel the prefetch
+                    .then( Mono.never() )
+                    .cast( GroupCache.Entry.class );
 
-        return entry.latest()
+                // or() so that the prefetch keeps the right context 
+                // (which doesn't happen with subscribe())
+                // never() so the or() always selects the real values
+                return updated.or( prefetcher );
+
+            } )
+            .map( GroupCache.Entry::value )
             .filter( g -> !g.isEmpty() ) // Skip processing nested if empty
             .flatMapMany( groups -> Flux.fromIterable( groups )
                 .mergeWith( getIndirectGroups( email, groups, seen ) )
@@ -153,11 +161,7 @@ public class RecursiveGroupResolver implements GroupResolver {
                 observations, 
                 METRIC_TAG_QUERY_VALUE, email 
             ) )
-            .tap( Micrometer.observation( observations ) )
-            // or() so that the prefetch keeps the right context 
-            // (which doesn't happen with subscribe())
-            // never() so the or() always selects the real values
-            .or( prefetcher.thenMany( Flux.never() ) );
+            .tap( Micrometer.observation( observations ) );
 
     }
 

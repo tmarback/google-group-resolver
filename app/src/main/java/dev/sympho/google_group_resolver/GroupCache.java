@@ -1,8 +1,9 @@
 package dev.sympho.google_group_resolver;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 import org.checkerframework.dataflow.qual.SideEffectFree;
 
@@ -18,9 +19,17 @@ public interface GroupCache {
      * Fetches the current entry for an entity.
      *
      * @param email The email of the entity to lookup.
-     * @return The current entry for that entity.
+     * @return The current entry for that entity. May be not currently valid.
      */
-    Entry get( String email );
+    Mono<Entry> get( String email );
+
+    /**
+     * Updates the entry for an entity.
+     *
+     * @param email The email of the entity to lookup.
+     * @return The updated entry.
+     */
+    Mono<Entry> update( String email );
 
     /**
      * Retrieves the number of entries currently stored in this cache.
@@ -28,7 +37,7 @@ public interface GroupCache {
      * @return The current number of entries.
      */
     @SideEffectFree
-    int size();
+    long size();
 
     /**
      * Retrieves the capacity of the cache.
@@ -41,16 +50,10 @@ public interface GroupCache {
      *           number of entries <i>may</i> temporarily exceed the capacity.
      */
     @Pure
-    int capacity();
+    long capacity();
 
     /**
      * An entry in the cache.
-     *
-     * @apiNote While {@link #latest()} is defined to continue working indefinitely, keeping an
-     *          entry stored long-term to retrieve the updated value with {@link #latest()} may
-     *          cause worse performance and increased memory consumption; it is expected (and
-     *          strongly recommended) that an entry is used promptly upon being acquired, and
-     *          then discarded.
      */
     interface Entry {
 
@@ -65,30 +68,44 @@ public interface GroupCache {
 
         /**
          * Retrieves the value cached in this entry.
-         * 
-         * <p>The entry has a value if it is currently {@link #valid()}, or is stale but not 
-         * expired. Otherwise, there is no cached value, and this method returns {@code null}.
          *
-         * @return The cached value, if any.
+         * @return The cached value.
          */
         @SideEffectFree
-        @Nullable List<DirectoryGroup> value();
-            
+        List<DirectoryGroup> value();
+
+    }
+
+    /**
+     * A loaded entry.
+     *
+     * @param value The entry value.
+     * @param staleOn When the entry will become stale.
+     */
+    record LoadedEntry(
+        List<DirectoryGroup> value,
+        Instant staleOn
+    ) implements Entry {
+
+        @Override
+        public boolean valid() {
+
+            return staleOn.isAfter( Instant.now() );
+
+        }
+
         /**
-         * Retrieves the latest group set of the entity cached under this entry. If this instance
-         * is currently valid, the {@link #value() cached value} is used, otherwise using the value
-         * cached on the latest entry (if any) or fetching the current value from the backend, as
-         * necessary.
+         * Creates an instance.
          *
-         * @return The latest group set.
-         * @apiNote The value is resolved upon subscription to the returned Mono, <i>not</i> at the
-         *          time of calling this method; this means the Mono will resolve to the latest
-         *          value at the time of subscription and may issue different results at different
-         *          points in time. However, this method may display degraded performance on an
-         *          old entry instance that precedes many refreshes; it is strongly recommended
-         *          to always fetch an entry and use it promptly rather than storing it.
+         * @param value The value of the entry.
+         * @param ttlLive After how long the entry becomes stale.
+         * @return The instance.
          */
-        Mono<List<DirectoryGroup>> latest();
+        public static LoadedEntry of( final List<DirectoryGroup> value, final Duration ttlLive ) {
+
+            return new LoadedEntry( value, Instant.now().plus( ttlLive ) );
+
+        }
 
     }
     

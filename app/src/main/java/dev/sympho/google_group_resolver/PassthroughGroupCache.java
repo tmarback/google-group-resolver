@@ -1,12 +1,10 @@
 package dev.sympho.google_group_resolver;
 
-import java.util.List;
+import java.time.Duration;
 import java.util.Objects;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.dataflow.qual.Pure;
 
-import dev.sympho.google_group_resolver.google.DirectoryGroup;
 import dev.sympho.google_group_resolver.google.DirectoryService;
 import reactor.core.publisher.Mono;
 
@@ -20,49 +18,49 @@ public class PassthroughGroupCache implements GroupCache {
     /** Client to use to fetch new data. */
     private final DirectoryService directory;
 
+    /** How long after being fetched that data becomes stale. */
+    private final Duration ttlLive;
+
     /**
      * Creates a new instance.
      *
      * @param directory Client to use to fetch new data.
+     * @param ttlLive How long after being fetched that data should become stale.
      */
     @Pure
-    public PassthroughGroupCache( final DirectoryService directory ) {
+    public PassthroughGroupCache( 
+        final DirectoryService directory,
+        final Duration ttlLive
+    ) {
 
         this.directory = Objects.requireNonNull( directory );
+        this.ttlLive = ttlLive;
 
     }
 
     @Override
-    public Entry get( final String email ) {
+    public Mono<Entry> get( final String email ) {
 
-        return new Entry() {
-
-            @Override
-            public boolean valid() {
-                return false;
-            }
-
-            @Override
-            public @Nullable List<DirectoryGroup> value() {
-                return null;
-            }
-
-            @Override
-            public Mono<List<DirectoryGroup>> latest() {
-                return directory.getGroupsFor( email ).collectList();
-            }
-
-        };
+        return update( email );
 
     }
 
     @Override
-    public int size() {
+    public Mono<Entry> update( final String email ) {
+
+        return directory.getGroupsFor( email )
+            .collectList()
+            .map( gs -> LoadedEntry.of( gs, ttlLive ) );
+
+    }
+
+    @Override
+    public long size() {
         return 0;
     }
 
     @Override
-    public int capacity() {
+    public long capacity() {
         return 0;
     }
     
