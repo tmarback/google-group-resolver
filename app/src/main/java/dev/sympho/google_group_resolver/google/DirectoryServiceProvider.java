@@ -181,11 +181,20 @@ public class DirectoryServiceProvider implements DirectoryService {
     /**
      * Execute a batch of tasks.
      *
-     * @param tasks The tasks to execute.
+     * @param batch The tasks to execute.
      */
-    private void doTasks( final List<Task<?>> tasks ) {
+    private void doTasks( final List<Task<?>> batch ) {
 
-        if ( tasks.isEmpty() ) { // Sanity check
+        final var tasks = batch.stream()
+            .filter( task -> !task.emitter().isCancelled() )
+            .toList();
+        
+        final var dropped = batch.size() - tasks.size();
+        if ( dropped > 0 ) {
+            LOG.warn( "{} tasks in batch were cancelled", dropped );
+        }
+
+        if ( tasks.isEmpty() ) {
             LOG.warn( "Empty batch received" );
             return;
         }
@@ -242,6 +251,7 @@ public class DirectoryServiceProvider implements DirectoryService {
                     BufferOverflowStrategy.DROP_OLDEST 
                 )
                 .publishOn( batchScheduler, batchSize )
+                .filter( task -> !task.emitter().isCancelled() )
                 .bufferTimeout( batchSize, batchTimeout, batchScheduler, true )
                 .doOnNext( ts -> LOG.trace(
                     "Issuing batch with {} tasks",
@@ -304,7 +314,7 @@ public class DirectoryServiceProvider implements DirectoryService {
                     );
                     return;
             }
-        } while ( Instant.now().isBefore( deadline ) );
+        } while ( Instant.now().isBefore( deadline ) && !task.emitter().isCancelled() );
 
         task.emitter().error( 
             new IllegalStateException( "Could not submit task due to contention" ) 
