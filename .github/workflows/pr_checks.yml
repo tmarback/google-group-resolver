@@ -40,7 +40,7 @@ jobs:
           add-job-summary-as-pr-comment: always
 
       - name: Run check task
-        run: ./gradlew check -Pchecker=true -Pstrict=true -Pstyle=true
+        run: ./gradlew build -Pchecker=true -Pstrict=true -Pstyle=true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
