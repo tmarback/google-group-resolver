@@ -1,0 +1,35 @@
+name: Generate Dependency Graph
+
+on:
+  push:
+    branches:
+      - main
+      - 'support/v*'
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-submission:
+    name: Generate dependency graph
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java and Maven
+        uses: actions/setup-java@v4
+        with: 
+          distribution: temurin
+          java-version: 21
+
+      - name: Generate and save dependency graph
+        uses: gradle/actions/dependency-submission@v4
+        with:
+          dependency-graph: generate-and-upload
+          validate-wrappers: true
+          artifact-retention-days: 1 # Only needs to last enough to submit

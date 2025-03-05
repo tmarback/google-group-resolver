@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write # For the container
-      contents: write # For the dependency graph
       # For attestation
       id-token: write
       attestations: write
@@ -102,9 +101,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: true
-
-      - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@v4
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.1

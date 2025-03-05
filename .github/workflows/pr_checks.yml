@@ -49,8 +49,3 @@ jobs:
         with:
           context: .
           push: false
-
-      - name: Generate and save dependency graph
-        uses: gradle/actions/dependency-submission@v4
-        with:
-          dependency-graph: generate-and-upload
