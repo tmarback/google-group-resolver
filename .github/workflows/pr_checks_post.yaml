@@ -1,0 +1,19 @@
+name: PR Checks Postprocess
+
+on:
+  workflow_run:
+    workflows: ['PR Checks']
+    types: [completed]
+
+jobs:
+  submit-dependency-graph:
+    name: Submit Dependency Graph
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download and submit dependency graph
+        uses: gradle/actions/dependency-submission@v4
+        with:
+          dependency-graph: download-and-submit # Download saved dependency-graph and submit
