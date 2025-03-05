@@ -73,12 +73,13 @@ public class DirectoryServiceProvider implements DirectoryService {
      * The maximum amount of time that the flux issued by {@link #getGroupsFor(String)} waits
      * without new signals before timing out.
      * 
-     * <p>Normally this timeout should never be reached, as the underlying HTTP requests eventually
-     * timeout by themselves, which will cause an error to be issued. This timeout is mostly a
-     * preventative measure in case some unexpected issue causes the task/emitter to be lost,
-     * leading to the task never finishing.
+     * <p>This is not intended to handle connection issues, as those eventually time out by
+     * themselves; 
+     * it is also largely not for backpressure, as pending tasks eventually start getting 
+     * dropped if the queue becomes too long;
+     * rather, it is mostly a failsafe in case a task gets lost somehow so it is never ended.
      */
-    static final Duration RESULT_TIMEOUT = Duration.ofSeconds( 1 );
+    static final Duration RESULT_TIMEOUT = Duration.ofSeconds( 10 );
 
     /** Error message used when an unexpected exception is thrown. */
     static final String ERROR_UNEXPECTED_EXCEPTION = 
