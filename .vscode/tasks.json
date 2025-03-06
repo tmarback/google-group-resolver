@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "id": "gradle-update-lockfile",
+            "type": "gradle",
+            "label": "Update Gradle lockfile",
+            "description": "Updates the Gradle lockfile",
+            "workspaceFolder": "${workspaceFolder}",
+            "projectFolder": "${workspaceFolder}",
+            "buildFile": "${workspaceFolder}/build.gradle.kts", 
+            "rootProject": "google-group-resolver",
+            "project": "google-group-resolver",
+            "group": "other",
+            "script": "resolveAndLockAll",
+            "args": "--write-locks",
+            "javaDebug": false,
+            "problemMatcher": [
+                "$gradle"
+            ],
+        }
+    ]
+}
