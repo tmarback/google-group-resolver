@@ -3,7 +3,7 @@ resilience4j = "2.3.0"
 
 [libraries]
 google-oauth-client = { module = "com.google.oauth-client:google-oauth-client-jetty", version = "1.39.0" }
-google-api-directory = { module = "com.google.apis:google-api-services-admin-directory", version = "directory_v1-rev20250217-2.0.0" }
+google-api-directory = { module = "com.google.apis:google-api-services-admin-directory", version = "directory_v1-rev20250421-2.0.0" }
 apache-commons-collections = { module = "org.apache.commons:commons-collections4", version = "4.4" }
 otel-logs-autoconfigure = { module = "am.ik.spring.opentelemetry:otel-logs-autoconfigure", version = "0.3.0" }
 resilience4j-ratelimiter = { module = "io.github.resilience4j:resilience4j-ratelimiter", version.ref = "resilience4j" }
