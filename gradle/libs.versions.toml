@@ -13,6 +13,6 @@ bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = 
 osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 
 [plugins]
-springboot = { id = "org.springframework.boot", version = "3.4.3" }
+springboot = { id = "org.springframework.boot", version = "3.4.5" }
 tasktree = { id = "com.dorongold.task-tree", version = "4.0.0" }
 cyclonedx = { id = "org.cyclonedx.bom", version = "2.2.0" }
