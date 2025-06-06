@@ -92,7 +92,7 @@ tasks.withType<Checkstyle> {
 }
 
 checkstyle {
-    toolVersion = "10.21.0"
+    toolVersion = "10.25.0"
 }
 
 val strictMode by extra { findProperty("strict") == "true" }
