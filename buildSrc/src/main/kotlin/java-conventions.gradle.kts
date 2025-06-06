@@ -112,20 +112,25 @@ if (strictMode) {
 // Checker Framework configuration
 
 val checker by extra { findProperty("checker") == "true" }
-val checkerVersion by extra("3.45.0")
+
+val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
+
+var checkerMain = libs.findLibrary("checker.main").get()
+var checkerQual = libs.findLibrary("checker.qual").get()
+var checkerUtil = libs.findLibrary("checker.util").get()
 
 dependencies {
-    compileOnly("org.checkerframework:checker-qual:$checkerVersion")
-    testFixturesImplementation("org.checkerframework:checker-qual:$checkerVersion")
-    implementation("org.checkerframework:checker-util:$checkerVersion")
-    checkerFramework("org.checkerframework:checker:$checkerVersion")
+    compileOnly(checkerQual)
+    testFixturesImplementation(checkerQual)
+    implementation(checkerUtil)
+    checkerFramework(checkerMain)
 }
 
 testing {
     suites { 
         withType(JvmTestSuite::class).configureEach { 
             dependencies {
-                compileOnly("org.checkerframework:checker-qual:$checkerVersion")
+                compileOnly(checkerQual)
             }
         }
     }
