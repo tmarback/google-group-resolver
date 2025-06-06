@@ -8,7 +8,7 @@ apache-commons-collections = { module = "org.apache.commons:commons-collections4
 otel-logs-autoconfigure = { module = "am.ik.spring.opentelemetry:otel-logs-autoconfigure", version = "0.3.0" }
 resilience4j-ratelimiter = { module = "io.github.resilience4j:resilience4j-ratelimiter", version.ref = "resilience4j" }
 # For getting rid of annotation warnings
-spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.9.2" }
+spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.9.3" }
 bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "7.1.0" }
 osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 
