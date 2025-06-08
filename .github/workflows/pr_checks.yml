@@ -11,7 +11,10 @@ on:
     types:
       - checks_requested
 
-concurrency: pr-${{ github.ref }}
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
     name: Build
