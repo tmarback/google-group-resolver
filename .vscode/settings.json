@@ -15,29 +15,7 @@
     ],
     // YAML editing
     "yaml.validate": false,
-    "[yaml]": {
-        "editor.insertSpaces": true,
-        "editor.tabSize": 2,
-        "editor.quickSuggestions": {
-            "other": true,
-            "comments": false,
-            "strings": true
-        },
-        "editor.autoIndent": "full",
-        "editor.defaultFormatter": "redhat.vscode-yaml"
-    },
-    "[yml]": {
-        "editor.insertSpaces": true,
-        "editor.tabSize": 2,
-        "editor.quickSuggestions": {
-            "other": true,
-            "comments": false,
-            "strings": true
-        },
-        "editor.autoIndent": "full",
-        "editor.defaultFormatter": "redhat.vscode-yaml"
-    },
-    "[spring-boot-properties-yaml]": {
+    "[yaml][yml][spring-boot-properties-yaml]": {
         "editor.insertSpaces": true,
         "editor.tabSize": 2,
         "editor.quickSuggestions": {
