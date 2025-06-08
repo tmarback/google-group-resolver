@@ -2,13 +2,49 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "id": "gradle-build-lint",
+            "type": "gradle",
+            "label": "Build project",
+            "description": "Builds the project",
+            "workspaceFolder": "${workspaceFolder}",
+            "projectFolder": "${workspaceFolder}",
+            "buildFile": "${workspaceFolder}/build.gradle.kts",
+            "rootProject": "google-group-resolver",
+            "project": "google-group-resolver",
+            "group": "build",
+            "script": "build",
+            "args": "",
+            "javaDebug": false,
+            "problemMatcher": [
+                "$gradle"
+            ],
+        },
+        {
+            "id": "gradle-build-lint",
+            "type": "gradle",
+            "label": "Build project (lint)",
+            "description": "Builds the project with linting enabled",
+            "workspaceFolder": "${workspaceFolder}",
+            "projectFolder": "${workspaceFolder}",
+            "buildFile": "${workspaceFolder}/build.gradle.kts",
+            "rootProject": "google-group-resolver",
+            "project": "google-group-resolver",
+            "group": "build",
+            "script": "build",
+            "args": "-Pchecker=true",
+            "javaDebug": false,
+            "problemMatcher": [
+                "$gradle"
+            ],
+        },
+        {
             "id": "gradle-update-lockfile",
             "type": "gradle",
             "label": "Update Gradle lockfile",
             "description": "Updates the Gradle lockfile",
             "workspaceFolder": "${workspaceFolder}",
             "projectFolder": "${workspaceFolder}",
-            "buildFile": "${workspaceFolder}/build.gradle.kts", 
+            "buildFile": "${workspaceFolder}/build.gradle.kts",
             "rootProject": "google-group-resolver",
             "project": "google-group-resolver",
             "group": "other",
@@ -18,6 +54,6 @@
             "problemMatcher": [
                 "$gradle"
             ],
-        }
+        },
     ]
 }
