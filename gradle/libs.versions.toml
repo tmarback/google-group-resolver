@@ -1,6 +1,6 @@
 [versions]
 resilience4j = "2.3.0"
-checkerframework = "3.49.4"
+checkerframework = "3.49.5"
 
 [libraries]
 google-oauth-client = { module = "com.google.oauth-client:google-oauth-client-jetty", version = "1.39.0" }
