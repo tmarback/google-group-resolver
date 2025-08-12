@@ -12,7 +12,7 @@ checker-main = { module = "org.checkerframework:checker", version.ref = "checker
 checker-util = { module = "org.checkerframework:checker-util", version.ref = "checkerframework" }
 checker-qual = { module = "org.checkerframework:checker-qual", version.ref = "checkerframework" }
 # For getting rid of annotation warnings
-spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.9.3" }
+spotbugs = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.9.4" }
 bnd-annotation = { module = "biz.aQute.bnd:biz.aQute.bnd.annotation", version = "7.1.0" }
 osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 
