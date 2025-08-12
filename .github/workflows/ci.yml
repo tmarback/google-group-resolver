@@ -27,7 +27,7 @@ jobs:
       IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.sha }}
           submodules: 'recursive'
