@@ -20,4 +20,4 @@ osgi-annotation = { module = "org.osgi:osgi.annotation", version = "8.1.0" }
 springboot = { id = "org.springframework.boot", version = "3.5.3" }
 tasktree = { id = "com.dorongold.task-tree", version = "4.0.1" }
 cyclonedx = { id = "org.cyclonedx.bom", version = "2.3.1" }
-checkerframework = { id = "org.checkerframework", version = "0.6.55" }
+checkerframework = { id = "org.checkerframework", version = "0.6.57" }
