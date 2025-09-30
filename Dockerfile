@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre-jammy AS release
+FROM eclipse-temurin:25-jre-jammy AS release
 
 COPY --chown=root:root --chmod=0644 ./app/build/libs/google-group-resolver.jar /opt/app/application.jar
 COPY --chown=root:root --chmod=0755 ./docker-entrypoint.sh /opt/app/docker-entrypoint.sh
